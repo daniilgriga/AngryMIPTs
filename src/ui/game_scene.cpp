@@ -71,6 +71,13 @@ SceneId GameScene::handle_input ( const sf::Event& event )
         if ( key->code == sf::Keyboard::Key::Backspace )
             return SceneId::Menu;
     }
+
+    auto cmd = slingshot_.handle_input ( event, snapshot_.slingshot );
+    if ( cmd.has_value() )
+    {
+        // TODO: send command to physics thread via CommandQueue
+    }
+
     return SceneId::None;
 }
 
@@ -85,6 +92,7 @@ void GameScene::update()
 void GameScene::render ( sf::RenderWindow& window )
 {
     renderer_.draw_snapshot ( window, snapshot_ );
+    slingshot_.render ( window, snapshot_.slingshot );
     window.draw ( hud_text_ );
 }
 

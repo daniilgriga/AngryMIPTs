@@ -2,6 +2,7 @@
 #include "render/renderer.hpp"
 #include "scene.hpp"
 #include "shared/world_snapshot.hpp"
+#include "ui/slingshot.hpp"
 
 namespace angry
 {
@@ -10,6 +11,7 @@ class GameScene : public Scene
 {
 private:
     Renderer renderer_;
+    Slingshot slingshot_;
     WorldSnapshot snapshot_;
     sf::Font font_;
     sf::Text hud_text_;
