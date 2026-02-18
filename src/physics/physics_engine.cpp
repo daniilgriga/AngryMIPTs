@@ -315,6 +315,36 @@ void PhysicsEngine::createGround(float topYpx)
     const b2Polygon groundPolygon = b2MakeOffsetBox(halfWidthM, halfHeightM, centerM, b2MakeRot(0.0f));
 
     b2CreatePolygonShape(groundBodyId, &shapeDef, &groundPolygon);
+
+    // World bounds so projectile collides with screen borders instead of flying away.
+    const float wallHalfWidthM = 20.0f / PIXELS_PER_METER;
+    const float wallHalfHeightM = 900.0f / PIXELS_PER_METER;
+    const float leftWallCenterXPx = -10.0f;
+    const float rightWallCenterXPx = 1290.0f;
+    const float wallCenterYPx = 360.0f;
+
+    const b2Polygon leftWall = b2MakeOffsetBox(
+        wallHalfWidthM,
+        wallHalfHeightM,
+        b2Vec2{leftWallCenterXPx / PIXELS_PER_METER, wallCenterYPx / PIXELS_PER_METER},
+        b2MakeRot(0.0f));
+    b2CreatePolygonShape(groundBodyId, &shapeDef, &leftWall);
+
+    const b2Polygon rightWall = b2MakeOffsetBox(
+        wallHalfWidthM,
+        wallHalfHeightM,
+        b2Vec2{rightWallCenterXPx / PIXELS_PER_METER, wallCenterYPx / PIXELS_PER_METER},
+        b2MakeRot(0.0f));
+    b2CreatePolygonShape(groundBodyId, &shapeDef, &rightWall);
+
+    const float ceilingHalfHeightM = 20.0f / PIXELS_PER_METER;
+    const float ceilingCenterYPx = -20.0f;
+    const b2Polygon ceiling = b2MakeOffsetBox(
+        halfWidthM,
+        ceilingHalfHeightM,
+        b2Vec2{640.0f / PIXELS_PER_METER, ceilingCenterYPx / PIXELS_PER_METER},
+        b2MakeRot(0.0f));
+    b2CreatePolygonShape(groundBodyId, &shapeDef, &ceiling);
 }
 
 void PhysicsEngine::createBlockBody(const BlockData& block)
@@ -440,6 +470,8 @@ b2BodyId PhysicsEngine::createProjectileBody(ProjectileType type, const Vec2& sp
     b2BodyDef bodyDef = b2DefaultBodyDef();
     bodyDef.type = b2_dynamicBody;
     bodyDef.isBullet = true;
+    bodyDef.linearDamping = 0.0f;
+    bodyDef.angularDamping = 0.0f;
     const WorldVec2 spawnWorld = pxToWorld(spawnPx);
     bodyDef.position = b2Vec2{spawnWorld.x, spawnWorld.y};
 
@@ -447,8 +479,9 @@ b2BodyId PhysicsEngine::createProjectileBody(ProjectileType type, const Vec2& sp
 
     b2ShapeDef shapeDef = b2DefaultShapeDef();
     shapeDef.density = density;
-    shapeDef.material.friction = 0.4f;
-    shapeDef.material.restitution = 0.2f;
+    shapeDef.material.friction = 0.35f;
+    shapeDef.material.restitution = 0.05f;
+    shapeDef.material.rollingResistance = 0.08f;
 
     b2Circle circle = {};
     circle.center = b2Vec2{0.0f, 0.0f};
