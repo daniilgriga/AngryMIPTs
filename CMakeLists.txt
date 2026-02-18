@@ -6,7 +6,24 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Dependencies
+include(FetchContent)
+
 find_package(SFML 3 COMPONENTS Graphics Window System REQUIRED)
+
+find_package(box2d CONFIG QUIET)
+if(box2d_FOUND)
+    set(ANGRY_BOX2D_TARGET box2d::box2d)
+    message(STATUS "Found box2d package")
+else()
+    message(STATUS "box2d package not found, fetching from GitHub")
+    FetchContent_Declare(
+        box2d
+        GIT_REPOSITORY https://github.com/erincatto/box2d.git
+        GIT_TAG v2.4.1
+    )
+    FetchContent_MakeAvailable(box2d)
+    set(ANGRY_BOX2D_TARGET box2d)
+endif()
 
 find_package(nlohmann_json QUIET)
 if(nlohmann_json_FOUND)
@@ -35,6 +52,14 @@ if(TARGET nlohmann_json::nlohmann_json)
     target_link_libraries(angry_data PUBLIC nlohmann_json::nlohmann_json)
 endif()
 
+# Physics library (A)
+add_library(angry_physics
+    src/core/score_system.cpp
+    src/physics/physics_engine.cpp
+)
+target_include_directories(angry_physics PUBLIC src)
+target_link_libraries(angry_physics PUBLIC ${ANGRY_BOX2D_TARGET})
+
 # Main executable
 add_executable(${PROJECT_NAME}
     src/main.cpp
@@ -47,6 +72,7 @@ add_executable(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 target_link_libraries(${PROJECT_NAME} PRIVATE
     angry_data
+    angry_physics
     SFML::Graphics
     SFML::Window
     SFML::System

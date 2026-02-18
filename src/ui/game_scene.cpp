@@ -1,5 +1,10 @@
 #include "ui/game_scene.hpp"
 
+#include "data/logger.hpp"
+
+#include <algorithm>
+#include <string>
+
 namespace angry
 {
 
@@ -62,6 +67,18 @@ GameScene::GameScene ( const sf::Font& font )
 {
     hud_text_.setFillColor ( sf::Color::White );
     hud_text_.setPosition ( {20.f, 20.f} );
+
+    try
+    {
+        const LevelData level = level_loader_.load ( "levels/level_03.json" );
+        physics_.loadLevel ( level );
+        snapshot_ = physics_.getSnapshot();
+        Logger::info ( "Loaded level {} for GameScene", level.meta.id );
+    }
+    catch ( const std::exception& error )
+    {
+        Logger::error ( "Failed to load level_01.json: {}", error.what() );
+    }
 }
 
 SceneId GameScene::handle_input ( const sf::Event& event )
@@ -75,7 +92,7 @@ SceneId GameScene::handle_input ( const sf::Event& event )
     auto cmd = slingshot_.handle_input ( event, snapshot_.slingshot );
     if ( cmd.has_value() )
     {
-        // TODO: send command to physics thread via CommandQueue
+        command_queue_.push ( *cmd );
     }
 
     return SceneId::None;
@@ -83,6 +100,11 @@ SceneId GameScene::handle_input ( const sf::Event& event )
 
 void GameScene::update()
 {
+    const float dt = std::clamp ( frame_clock_.restart().asSeconds(), 0.0f, 1.0f / 30.0f );
+    physics_.processCommands ( command_queue_ );
+    physics_.step ( dt );
+    snapshot_ = physics_.getSnapshot();
+
     hud_text_.setString ( "Score: " + std::to_string ( snapshot_.score )
                           + "  Shots: " + std::to_string ( snapshot_.shotsRemaining )
                           + "/" + std::to_string ( snapshot_.totalShots )
