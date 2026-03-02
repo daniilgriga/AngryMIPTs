@@ -194,16 +194,14 @@ void GameScene::update()
     snapshot_ = physics_.getSnapshot();
 
     hud_text_.setString ( "Score: " + std::to_string ( snapshot_.score )
-                          + "  Shots: " + std::to_string ( snapshot_.shotsRemaining )
-                          + "/" + std::to_string ( snapshot_.totalShots )
-                          + "  [Backspace] Menu" );
+                          + "   [Backspace] Menu" );
 }
 
 void GameScene::render ( sf::RenderWindow& window )
 {
     renderer_.draw_snapshot ( window, snapshot_ );
     slingshot_.render ( window, snapshot_.slingshot );
-    window.draw ( hud_text_ );
+    renderer_.draw_hud ( window, snapshot_, hud_text_ );
 }
 
 }  // namespace angry

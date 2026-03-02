@@ -10,13 +10,17 @@ class Renderer
 {
 public:
     void draw_snapshot ( sf::RenderWindow& window, const WorldSnapshot& snapshot );
+    void draw_hud ( sf::RenderWindow& window, const WorldSnapshot& snapshot,
+                    sf::Text& score_text );
 
 private:
     void draw_object ( sf::RenderWindow& window, const ObjectSnapshot& obj );
     void draw_slingshot ( sf::RenderWindow& window, const SlingshotState& sling );
+    void draw_background ( sf::RenderWindow& window );
 
     sf::Color material_color ( Material mat );
     sf::Color kind_color ( ObjectSnapshot::Kind kind );
+    sf::Color tint_by_hp ( sf::Color base, float hp );
 };
 
 }  // namespace angry
