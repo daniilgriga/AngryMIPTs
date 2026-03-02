@@ -89,17 +89,15 @@ void Slingshot::render ( sf::RenderWindow& window, const SlingshotState& sling )
     };
     window.draw ( band_right, 2, sf::PrimitiveType::Lines );
 
-    // Projectile at drag point
     sf::CircleShape ball ( 8.f );
     ball.setOrigin ( {8.f, 8.f} );
     ball.setPosition ( drag_current_ );
     ball.setFillColor ( sf::Color ( 50, 50, 50 ) );
     window.draw ( ball );
 
-    // Trajectory preview
     sf::Vector2f pull = base - drag_current_;
-    sf::Vector2f launch_vel = pull * 5.f;
-    auto points = calc_trajectory ( launch_vel, base, 30 );
+    sf::Vector2f launch_vel = pull * 4.5f;
+    auto points = calc_trajectory ( launch_vel, base, 60 );
 
     for ( const auto& pt : points )
     {
@@ -116,7 +114,7 @@ std::vector<sf::Vector2f> Slingshot::calc_trajectory ( sf::Vector2f launch_vel,
                                                         int num_points )
 {
     const float gravity = PIXELS_PER_METER * 9.81f;
-    const float dt = 0.05f;
+    const float dt = 0.03f;
 
     std::vector<sf::Vector2f> points;
     sf::Vector2f pos = start;

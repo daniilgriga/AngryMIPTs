@@ -9,7 +9,7 @@ MenuScene::MenuScene ( const sf::Font& font )
     , prompt_( font_, "Press Enter to start", 24 )
 {
     title_.setFillColor ( sf::Color::White );
-    prompt_.setFillColor ( sf::Color ( 200, 200, 200 ) );
+    prompt_.setFillColor ( sf::Color ( 230, 245, 255 ) );
 }
 
 SceneId MenuScene::handle_input ( const sf::Event& event )
@@ -17,7 +17,7 @@ SceneId MenuScene::handle_input ( const sf::Event& event )
     if ( const auto* key = event.getIf<sf::Event::KeyPressed>() )
     {
         if ( key->code == sf::Keyboard::Key::Enter )
-            return SceneId::Game;
+            return SceneId::LevelSelect;
     }
     return SceneId::None;
 }

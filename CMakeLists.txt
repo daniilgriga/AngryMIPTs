@@ -85,6 +85,7 @@ add_executable(${PROJECT_NAME}
     src/ui/game_scene.cpp
     src/ui/slingshot.cpp
     src/ui/result_scene.cpp
+    src/ui/level_select_scene.cpp
     src/render/renderer.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE src)

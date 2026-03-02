@@ -1,8 +1,10 @@
 #pragma once
 #include "data/level_loader.hpp"
+#include "data/score_saver.hpp"
 #include "physics/physics_engine.hpp"
 #include "render/renderer.hpp"
 #include "scene.hpp"
+#include "shared/level_data.hpp"
 #include "shared/thread_safe_queue.hpp"
 #include "shared/world_snapshot.hpp"
 #include "ui/result_scene.hpp"
@@ -19,18 +21,27 @@ private:
     PhysicsEngine physics_;
     ThreadSafeQueue<Command> command_queue_;
     LevelLoader level_loader_;
+    ScoreSaver score_saver_;
     WorldSnapshot snapshot_;
     sf::Font font_;
     sf::Text hud_text_;
     sf::Clock frame_clock_;
     LevelResult last_result_;
+    SceneId pending_scene_ = SceneId::None;
+    int level_id_ = -1;
+    std::string scores_path_;
+    LevelMeta current_meta_;
 
     static WorldSnapshot make_mock_snapshot();
+    void finish_level();
 
 public:
     explicit GameScene ( const sf::Font& font );
 
     const LevelResult& get_last_result() const { return last_result_; }
+
+    void load_level ( int level_id, const std::string& scores_path = "" );
+    void retry();
 
     SceneId handle_input ( const sf::Event& event ) override;
     void update() override;

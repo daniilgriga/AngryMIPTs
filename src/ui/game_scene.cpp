@@ -91,45 +91,89 @@ GameScene::GameScene ( const sf::Font& font )
 {
     hud_text_.setFillColor ( sf::Color::White );
     hud_text_.setPosition ( {20.f, 20.f} );
+}
+
+void GameScene::load_level ( int level_id, const std::string& scores_path )
+{
+    level_id_ = level_id;
+    scores_path_ = scores_path;
+    pending_scene_ = SceneId::None;
 
     try
     {
-        const std::string levelPath = resolveProjectPath( "levels/level_03.json" );
-        const LevelData level = level_loader_.load ( levelPath );
+        const std::string path = resolveProjectPath (
+            "levels/level_0" + std::to_string ( level_id ) + ".json" );
+        const LevelData level = level_loader_.load ( path );
+        current_meta_ = level.meta;
         physics_.loadLevel ( level );
         snapshot_ = physics_.getSnapshot();
-        Logger::info ( "Loaded level {} for GameScene from {}", level.meta.id, levelPath );
+        frame_clock_.restart();
+        Logger::info ( "GameScene: loaded level {}", level_id );
     }
-    catch ( const std::exception& error )
+    catch ( const std::exception& e )
     {
-        Logger::error ( "Failed to load level_03.json: {}", error.what() );
+        Logger::error ( "GameScene: failed to load level {}: {}", level_id, e.what() );
     }
+}
+
+void GameScene::retry()
+{
+    load_level ( level_id_, scores_path_ );
+}
+
+void GameScene::finish_level()
+{
+    const bool won = ( snapshot_.status == LevelStatus::Win );
+    const int score = snapshot_.score;
+
+    int stars = 0;
+    if ( won && current_meta_.id > 0 )
+    {
+        if ( score >= current_meta_.star3Threshold )
+            stars = 3;
+        else if ( score >= current_meta_.star2Threshold )
+            stars = 2;
+        else if ( score >= current_meta_.star1Threshold )
+            stars = 1;
+    }
+
+    last_result_ = { won, score, stars };
+
+    if ( !scores_path_.empty() && level_id_ > 0 )
+    {
+        try
+        {
+            score_saver_.saveScore ( scores_path_, level_id_, score, stars );
+        }
+        catch ( const std::exception& e )
+        {
+            Logger::error ( "GameScene: failed to save score: {}", e.what() );
+        }
+    }
+
+    pending_scene_ = SceneId::Result;
 }
 
 SceneId GameScene::handle_input ( const sf::Event& event )
 {
+    if ( pending_scene_ != SceneId::None )
+    {
+        SceneId next = pending_scene_;
+        pending_scene_ = SceneId::None;
+        return next;
+    }
+
     if ( const auto* key = event.getIf<sf::Event::KeyPressed>() )
     {
         if ( key->code == sf::Keyboard::Key::Backspace )
             return SceneId::Menu;
-
-        // TODO: remove debug keys when physics is integrated
-        if ( key->code == sf::Keyboard::Key::W )
-        {
-            last_result_ = {true, 3500, 2};
-            return SceneId::Result;
-        }
-        if ( key->code == sf::Keyboard::Key::L )
-        {
-            last_result_ = {false, 500, 0};
-            return SceneId::Result;
-        }
     }
 
-    auto cmd = slingshot_.handle_input ( event, snapshot_.slingshot );
-    if ( cmd.has_value() )
+    if ( snapshot_.status == LevelStatus::Running )
     {
-        command_queue_.push ( *cmd );
+        auto cmd = slingshot_.handle_input ( event, snapshot_.slingshot );
+        if ( cmd.has_value() )
+            command_queue_.push ( *cmd );
     }
 
     return SceneId::None;
@@ -137,6 +181,13 @@ SceneId GameScene::handle_input ( const sf::Event& event )
 
 void GameScene::update()
 {
+    if ( snapshot_.status != LevelStatus::Running )
+    {
+        if ( pending_scene_ == SceneId::None )
+            finish_level();
+        return;
+    }
+
     const float dt = std::clamp ( frame_clock_.restart().asSeconds(), 0.0f, 1.0f / 30.0f );
     physics_.processCommands ( command_queue_ );
     physics_.step ( dt );

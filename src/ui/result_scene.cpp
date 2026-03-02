@@ -15,7 +15,7 @@ ResultScene::ResultScene ( const sf::Font& font )
     title_.setFillColor ( sf::Color::White );
     score_text_.setFillColor ( sf::Color::White );
     stars_text_.setFillColor ( sf::Color ( 255, 215, 0 ) );
-    prompt_.setFillColor ( sf::Color ( 200, 200, 200 ) );
+    prompt_.setFillColor ( sf::Color ( 230, 245, 255 ) );
 }
 
 void ResultScene::set_result ( const LevelResult& result )

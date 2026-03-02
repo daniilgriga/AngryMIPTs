@@ -1,4 +1,5 @@
 #include "ui/game_scene.hpp"
+#include "ui/level_select_scene.hpp"
 #include "ui/menu_scene.hpp"
 #include "ui/result_scene.hpp"
 #include "ui/scene_manager.hpp"
@@ -47,8 +48,13 @@ int main()
     sf::RenderWindow window ( sf::VideoMode ( {1280, 720} ), "AngryMipts" );
     window.setFramerateLimit ( 60 );
 
+    auto level_select = std::make_unique<angry::LevelSelectScene> ( font );
+    level_select->load_data ( resolveProjectPath ( "levels" ),
+                              resolveProjectPath ( "scores.json" ) );
+
     angry::SceneManager scenes;
     scenes.add_scene ( angry::SceneId::Menu, std::make_unique<angry::MenuScene> ( font ) );
+    scenes.add_scene ( angry::SceneId::LevelSelect, std::move ( level_select ) );
     scenes.add_scene ( angry::SceneId::Game, std::make_unique<angry::GameScene> ( font ) );
     scenes.add_scene ( angry::SceneId::Result, std::make_unique<angry::ResultScene> ( font ) );
     scenes.switch_to ( angry::SceneId::Menu );
