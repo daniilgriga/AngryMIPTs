@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../core/score_system.hpp"
 #include "../shared/command.hpp"
 #include "../shared/event.hpp"
 #include "../shared/level_data.hpp"
@@ -8,6 +9,7 @@
 
 #include <box2d/id.h>
 
+#include <unordered_map>
 #include <vector>
 
 namespace angry
@@ -18,6 +20,7 @@ class PhysicsEngine
 public:
     ~PhysicsEngine();
 
+    void registerLevel(const LevelData& level);
     void loadLevel(const LevelData& level);
     void step(float dt);
     void processCommands(ThreadSafeQueue<Command>& cmdQueue);
@@ -59,6 +62,8 @@ private:
     std::vector<BodyBinding> bodies_;
     std::vector<Event> events_;
     std::vector<Command> pendingCommands_;
+    ScoreSystem scoreSystem_;
+    std::unordered_map<int, LevelData> levelRegistry_;
 
     LevelData currentLevel_{};
     bool levelLoaded_ = false;
@@ -70,6 +75,9 @@ private:
     int nextProjectileIndex_ = 0;
     b2BodyId activeProjectileBodyId_ = b2_nullBodyId;
     int activeProjectileSettledFrames_ = 0;
+    float activeProjectileSettledTimeSec_ = 0.0f;
+    ProjectileType activeProjectileType_ = ProjectileType::Standard;
+    bool activeProjectileAbilityUsed_ = false;
 };
 
 }  // namespace angry
