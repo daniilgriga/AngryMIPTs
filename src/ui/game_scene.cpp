@@ -105,6 +105,7 @@ void GameScene::load_level ( int level_id, const std::string& scores_path )
             "levels/level_0" + std::to_string ( level_id ) + ".json" );
         const LevelData level = level_loader_.load ( path );
         current_meta_ = level.meta;
+        physics_.registerLevel ( level );
         physics_.loadLevel ( level );
         snapshot_ = physics_.getSnapshot();
         frame_clock_.restart();

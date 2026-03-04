@@ -8,6 +8,7 @@
 
 #include <box2d/id.h>
 
+#include <unordered_map>
 #include <vector>
 
 namespace angry
@@ -18,6 +19,7 @@ class PhysicsEngine
 public:
     ~PhysicsEngine();
 
+    void registerLevel(const LevelData& level);
     void loadLevel(const LevelData& level);
     void step(float dt);
     void processCommands(ThreadSafeQueue<Command>& cmdQueue);
@@ -59,6 +61,7 @@ private:
     std::vector<BodyBinding> bodies_;
     std::vector<Event> events_;
     std::vector<Command> pendingCommands_;
+    std::unordered_map<int, LevelData> levelRegistry_;
 
     LevelData currentLevel_{};
     bool levelLoaded_ = false;

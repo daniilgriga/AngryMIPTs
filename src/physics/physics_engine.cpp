@@ -52,6 +52,11 @@ PhysicsEngine::~PhysicsEngine()
     }
 }
 
+void PhysicsEngine::registerLevel(const LevelData& level)
+{
+    levelRegistry_[level.meta.id] = level;
+}
+
 void PhysicsEngine::loadLevel(const LevelData& level)
 {
     if (B2_IS_NON_NULL(worldId_))
@@ -61,6 +66,7 @@ void PhysicsEngine::loadLevel(const LevelData& level)
     }
 
     currentLevel_ = level;
+    registerLevel(level);
     levelLoaded_ = true;
     paused_ = false;
 
@@ -395,9 +401,10 @@ void PhysicsEngine::applyCommand(const Command& cmd)
 
             if constexpr (std::is_same_v<T, LoadLevelCmd>)
             {
-                if (concrete.levelId == currentLevel_.meta.id)
+                const auto it = levelRegistry_.find(concrete.levelId);
+                if (it != levelRegistry_.end())
                 {
-                    loadLevel(currentLevel_);
+                    loadLevel(it->second);
                 }
             }
             else if constexpr (std::is_same_v<T, RestartCmd>)
