@@ -688,8 +688,8 @@ void PhysicsEngine::applyCommand(const Command& cmd)
                         const Vec2 rightVelPx = rotatePxVector(velPx, kSplitAngleRad);
 
                         // Spawn split projectiles exactly at the parent position.
-                        createProjectileBody(ProjectileType::Standard, posPx, leftVelPx);
-                        createProjectileBody(ProjectileType::Standard, posPx, rightVelPx);
+                        createProjectileBody(ProjectileType::Splitter, posPx, leftVelPx);
+                        createProjectileBody(ProjectileType::Splitter, posPx, rightVelPx);
                         activeProjectileAbilityUsed_ = true;
                     }
                 }
@@ -904,6 +904,7 @@ b2BodyId PhysicsEngine::createProjectileBody(ProjectileType type, const Vec2& sp
     binding.sizePx = {radiusPx * 2.0f, radiusPx * 2.0f};
     binding.radiusPx = radiusPx;
     binding.material = Material::Stone;
+    binding.projectileType = type;
     binding.hp = 1.0f;
     binding.maxHp = 1.0f;
     binding.lastPositionPx = spawnPx;
@@ -975,6 +976,7 @@ void PhysicsEngine::refreshSnapshot()
         object.sizePx = binding.sizePx;
         object.radiusPx = binding.radiusPx;
         object.material = binding.material;
+        object.projectileType = binding.projectileType;
         object.hpNormalized = clampValue(binding.hp / std::max(1.0f, binding.maxHp), 0.0f, 1.0f);
 
         if (B2_IS_NON_NULL(binding.bodyId) && b2Body_IsValid(binding.bodyId))

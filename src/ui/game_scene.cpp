@@ -11,6 +11,98 @@ namespace angry
 namespace
 {
 
+constexpr float kCameraWidth = 1280.f;
+constexpr float kCameraHeight = 720.f;
+constexpr float kWorldAspect = kCameraWidth / kCameraHeight;
+constexpr float kImpactFlashDecay = 3.0f;
+
+constexpr auto kPostFxFragmentShader = R"GLSL(
+uniform sampler2D texture;
+uniform float uTime;
+uniform float uVignette;
+uniform float uFlash;
+
+void main()
+{
+    vec2 uv = gl_TexCoord[0].xy;
+    vec4 color = texture2D(texture, uv);
+
+    // Slight filmic curve and contrast to make sprites look less flat.
+    color.rgb = pow(color.rgb, vec3(0.95));
+    color.rgb = (color.rgb - vec3(0.5)) * 1.08 + vec3(0.5);
+
+    float dist = distance(uv, vec2(0.5, 0.5));
+    float vignette = smoothstep(0.38, 0.86, dist);
+    color.rgb *= 1.0 - uVignette * vignette;
+
+    float atmosphere = 0.016 * sin(uTime * 1.4 + uv.y * 11.0);
+    color.rgb += vec3(atmosphere);
+
+    float flashShape = max(0.0, 0.62 - dist);
+    color.rgb += vec3(uFlash * flashShape);
+
+    gl_FragColor = color;
+}
+)GLSL";
+
+constexpr auto kBloomExtractFragmentShader = R"GLSL(
+uniform sampler2D texture;
+uniform float uThreshold;
+
+void main()
+{
+    vec2 uv = gl_TexCoord[0].xy;
+    vec4 color = texture2D(texture, uv);
+    float luma = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+    float t = clamp((luma - uThreshold) / (1.0 - uThreshold), 0.0, 1.0);
+    t = t * t;
+    gl_FragColor = vec4(color.rgb * t, color.a * t);
+}
+)GLSL";
+
+constexpr auto kBloomBlurFragmentShader = R"GLSL(
+uniform sampler2D texture;
+uniform vec2 uTexel;
+uniform vec2 uDirection;
+
+void main()
+{
+    vec2 uv = gl_TexCoord[0].xy;
+    vec3 sum = texture2D(texture, uv).rgb * 0.227027;
+    sum += texture2D(texture, uv + uDirection * uTexel * 1.384615).rgb * 0.316216;
+    sum += texture2D(texture, uv - uDirection * uTexel * 1.384615).rgb * 0.316216;
+    sum += texture2D(texture, uv + uDirection * uTexel * 3.230769).rgb * 0.070270;
+    sum += texture2D(texture, uv - uDirection * uTexel * 3.230769).rgb * 0.070270;
+    gl_FragColor = vec4(sum, 1.0);
+}
+)GLSL";
+
+void apply_letterbox ( sf::View& view, sf::Vector2u window_size )
+{
+    if ( window_size.x == 0 || window_size.y == 0 )
+        return;
+
+    const float window_aspect =
+        static_cast<float> ( window_size.x ) / static_cast<float> ( window_size.y );
+
+    if ( window_aspect > kWorldAspect )
+    {
+        const float width = kWorldAspect / window_aspect;
+        const float left = ( 1.f - width ) * 0.5f;
+        view.setViewport ( sf::FloatRect ( {left, 0.f}, {width, 1.f} ) );
+    }
+    else if ( window_aspect < kWorldAspect )
+    {
+        const float height = window_aspect / kWorldAspect;
+        const float top = ( 1.f - height ) * 0.5f;
+        view.setViewport ( sf::FloatRect ( {0.f, top}, {1.f, height} ) );
+    }
+    else
+    {
+        view.setViewport ( sf::FloatRect ( {0.f, 0.f}, {1.f, 1.f} ) );
+    }
+}
+
 std::string resolveProjectPath( const std::filesystem::path& relativePath )
 {
     if ( std::filesystem::exists( relativePath ) )
@@ -30,6 +122,169 @@ std::string resolveProjectPath( const std::filesystem::path& relativePath )
     return relativePath.string();
 }
 
+sf::Color projectile_trail_color ( ProjectileType type )
+{
+    switch ( type )
+    {
+    case ProjectileType::Heavy:
+        return sf::Color ( 186, 145, 240, 170 );
+    case ProjectileType::Splitter:
+        return sf::Color ( 148, 220, 255, 170 );
+    case ProjectileType::Standard:
+    default:
+        return sf::Color ( 255, 165, 136, 165 );
+    }
+}
+
+struct MaterialVfxProfile
+{
+    sf::Color sparkColor;
+    sf::Color dustColor;
+    sf::Color shardColor;
+    float impulseToCount;
+    float hitSpeedScale;
+    int minHitCount;
+    int maxHitCount;
+    int destroyBurstCount;
+    int shardCount;
+    float shardSpeed;
+    float shardSize;
+    float hitFlashBoost;
+    float destroyFlashBoost;
+    bool ringOnHit;
+    bool ringOnDestroy;
+};
+
+const MaterialVfxProfile& vfx_profile ( Material material )
+{
+    static const MaterialVfxProfile wood {
+        sf::Color ( 230, 170, 90 ),
+        sf::Color ( 170, 120, 74, 180 ),
+        sf::Color ( 190, 130, 78 ),
+        1.7f,
+        26.f,
+        4,
+        14,
+        26,
+        9,
+        120.f,
+        5.f,
+        0.07f,
+        0.10f,
+        false,
+        false,
+    };
+
+    static const MaterialVfxProfile stone {
+        sf::Color ( 214, 214, 220 ),
+        sf::Color ( 145, 150, 160, 210 ),
+        sf::Color ( 172, 176, 186 ),
+        1.3f,
+        21.f,
+        3,
+        11,
+        20,
+        6,
+        85.f,
+        4.3f,
+        0.05f,
+        0.08f,
+        false,
+        false,
+    };
+
+    static const MaterialVfxProfile glass {
+        sf::Color ( 220, 245, 255 ),
+        sf::Color ( 170, 226, 255, 170 ),
+        sf::Color ( 204, 240, 255 ),
+        2.2f,
+        32.f,
+        6,
+        20,
+        34,
+        20,
+        210.f,
+        4.2f,
+        0.11f,
+        0.16f,
+        true,
+        true,
+    };
+
+    static const MaterialVfxProfile ice {
+        sf::Color ( 234, 250, 255 ),
+        sf::Color ( 178, 225, 255, 178 ),
+        sf::Color ( 214, 246, 255 ),
+        2.0f,
+        30.f,
+        5,
+        17,
+        30,
+        16,
+        170.f,
+        4.6f,
+        0.09f,
+        0.13f,
+        true,
+        true,
+    };
+
+    switch ( material )
+    {
+    case Material::Stone:
+        return stone;
+    case Material::Glass:
+        return glass;
+    case Material::Ice:
+        return ice;
+    case Material::Wood:
+    default:
+        return wood;
+    }
+}
+
+const ObjectSnapshot* find_snapshot_object ( const WorldSnapshot& snapshot, EntityId id )
+{
+    for ( const auto& object : snapshot.objects )
+    {
+        if ( object.id == id )
+            return &object;
+    }
+    return nullptr;
+}
+
+Material choose_impact_material ( const WorldSnapshot& snapshot, EntityId aId, EntityId bId )
+{
+    const ObjectSnapshot* a = find_snapshot_object ( snapshot, aId );
+    const ObjectSnapshot* b = find_snapshot_object ( snapshot, bId );
+
+    const auto prefer = [] ( const ObjectSnapshot* obj ) -> bool
+    {
+        if ( !obj || !obj->isActive )
+            return false;
+        return obj->kind == ObjectSnapshot::Kind::Block
+               || obj->kind == ObjectSnapshot::Kind::Target;
+    };
+
+    if ( prefer ( a ) && prefer ( b ) )
+    {
+        if ( a->material == Material::Glass || b->material == Material::Glass )
+            return Material::Glass;
+        if ( a->material == Material::Ice || b->material == Material::Ice )
+            return Material::Ice;
+        if ( a->material == Material::Stone || b->material == Material::Stone )
+            return Material::Stone;
+        return a->material;
+    }
+
+    if ( prefer ( a ) )
+        return a->material;
+    if ( prefer ( b ) )
+        return b->material;
+
+    return Material::Wood;
+}
+
 }  // namespace
 
 WorldSnapshot GameScene::make_mock_snapshot()
@@ -42,7 +297,6 @@ WorldSnapshot GameScene::make_mock_snapshot()
     snap.stars = 0;
     snap.physicsStepMs = 0.f;
 
-    // slingshot
     snap.slingshot.basePx = {200.f, 550.f};
     snap.slingshot.pullOffsetPx = {0.f, 0.f};
     snap.slingshot.maxPullPx = 120.f;
@@ -51,35 +305,29 @@ WorldSnapshot GameScene::make_mock_snapshot()
 
     EntityId id = 1;
 
-    // ground
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {640.f, 700.f}, 0.f, {1280.f, 40.f}, 0.f,
-                              Material::Stone, 1.f, true} );
+                              Material::Stone, ProjectileType::Standard, 1.f, true} );
 
-    // left pillar
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {800.f, 580.f}, 0.f, {20.f, 100.f}, 0.f,
-                              Material::Wood, 1.f, true} );
+                              Material::Wood, ProjectileType::Standard, 1.f, true} );
 
-    // right pillar
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {900.f, 580.f}, 0.f, {20.f, 100.f}, 0.f,
-                              Material::Wood, 1.f, true} );
+                              Material::Wood, ProjectileType::Standard, 1.f, true} );
 
-    // top beam
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {850.f, 520.f}, 0.f, {140.f, 20.f}, 0.f,
-                              Material::Wood, 0.8f, true} );
+                              Material::Wood, ProjectileType::Standard, 0.8f, true} );
 
-    // glass block on top
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {850.f, 500.f}, 0.f, {60.f, 20.f}, 0.f,
-                              Material::Glass, 1.f, true} );
+                              Material::Glass, ProjectileType::Standard, 1.f, true} );
 
-    // target (circle)
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Target,
                               {850.f, 560.f}, 0.f, {0.f, 0.f}, 15.f,
-                              Material::Wood, 1.f, true} );
+                              Material::Wood, ProjectileType::Standard, 1.f, true} );
 
     return snap;
 }
@@ -88,9 +336,44 @@ GameScene::GameScene ( const sf::Font& font )
     : snapshot_ ( make_mock_snapshot() )
     , font_ ( font )
     , hud_text_ ( font_, "", 20 )
+    , game_view_ ( sf::FloatRect ( {0.f, 0.f}, {kCameraWidth, kCameraHeight} ) )
 {
     hud_text_.setFillColor ( sf::Color::White );
     hud_text_.setPosition ( {20.f, 20.f} );
+
+    if ( sf::Shader::isAvailable() )
+    {
+        post_shader_ready_ = post_shader_.loadFromMemory (
+            kPostFxFragmentShader, sf::Shader::Type::Fragment );
+        if ( post_shader_ready_ )
+        {
+            post_shader_.setUniform ( "texture", sf::Shader::CurrentTexture );
+        }
+        else
+        {
+            Logger::error ( "GameScene: failed to load post-processing shader" );
+        }
+
+        bloom_ready_ = bloom_extract_shader_.loadFromMemory (
+                           kBloomExtractFragmentShader, sf::Shader::Type::Fragment )
+                       && bloom_blur_shader_.loadFromMemory (
+                           kBloomBlurFragmentShader, sf::Shader::Type::Fragment );
+
+        if ( bloom_ready_ )
+        {
+            bloom_extract_shader_.setUniform ( "texture", sf::Shader::CurrentTexture );
+            bloom_extract_shader_.setUniform ( "uThreshold", 0.58f );
+            bloom_blur_shader_.setUniform ( "texture", sf::Shader::CurrentTexture );
+        }
+        else
+        {
+            Logger::error ( "GameScene: failed to load bloom shaders, bloom disabled" );
+        }
+    }
+    else
+    {
+        Logger::info ( "GameScene: shaders are unavailable, using fallback rendering path" );
+    }
 }
 
 void GameScene::load_level ( int level_id, const std::string& scores_path )
@@ -98,6 +381,7 @@ void GameScene::load_level ( int level_id, const std::string& scores_path )
     level_id_ = level_id;
     scores_path_ = scores_path;
     pending_scene_ = SceneId::None;
+    end_delay_ = 0.f;
 
     try
     {
@@ -155,6 +439,88 @@ void GameScene::finish_level()
     pending_scene_ = SceneId::Result;
 }
 
+void GameScene::process_events()
+{
+    auto events = physics_.drainEvents();
+    for ( const auto& ev : events )
+    {
+        std::visit (
+            [this] ( const auto& e )
+            {
+                using T = std::decay_t<decltype ( e )>;
+
+                if constexpr ( std::is_same_v<T, CollisionEvent> )
+                {
+                    sf::Vector2f pos ( e.contactPointPx.x, e.contactPointPx.y );
+                    const Material impactMaterial =
+                        choose_impact_material ( snapshot_, e.aId, e.bId );
+                    const MaterialVfxProfile& profile = vfx_profile ( impactMaterial );
+
+                    const int count = std::clamp (
+                        static_cast<int> ( e.impulse * profile.impulseToCount ),
+                        profile.minHitCount, profile.maxHitCount );
+                    const float speed =
+                        std::clamp ( e.impulse * profile.hitSpeedScale, 36.f, 240.f );
+
+                    particles_.emit ( pos, count, profile.sparkColor, speed, 0.38f, 3.2f );
+                    particles_.emit ( pos, count / 2, profile.dustColor, speed * 0.65f,
+                                      0.52f, 4.8f );
+
+                    if ( profile.ringOnHit )
+                    {
+                        particles_.emit_ring ( pos, 10, profile.sparkColor,
+                                               std::clamp ( speed * 0.55f, 55.f, 130.f ),
+                                               0.30f, 2.8f );
+                    }
+
+                    particles_.emit_shards (
+                        pos, std::max ( 2, count / 2 ), profile.shardColor,
+                        std::clamp ( profile.shardSpeed * ( e.impulse / 10.f ), 45.f, 220.f ),
+                        0.48f, profile.shardSize, 320.f );
+
+                    const float impulse = std::clamp ( e.impulse, 0.f, 30.f );
+                    if ( impulse > 1.2f )
+                    {
+                        shake_time_ =
+                            std::max ( shake_time_, std::clamp ( 0.06f + impulse * 0.012f,
+                                                                 0.06f, 0.24f ) );
+                        shake_strength_ =
+                            std::max ( shake_strength_, std::clamp ( impulse * 0.55f, 2.f, 14.f ) );
+                        impact_flash_ =
+                            std::max ( impact_flash_, std::clamp (
+                                impulse * profile.hitFlashBoost, 0.03f, 0.30f ) );
+                    }
+                }
+                else if constexpr ( std::is_same_v<T, DestroyedEvent> )
+                {
+                    sf::Vector2f pos ( e.positionPx.x, e.positionPx.y );
+                    const MaterialVfxProfile& profile = vfx_profile ( e.material );
+
+                    particles_.emit ( pos, profile.destroyBurstCount,
+                                      profile.sparkColor, profile.shardSpeed,
+                                      0.58f, profile.shardSize );
+                    particles_.emit ( pos, profile.destroyBurstCount / 2,
+                                      profile.dustColor, profile.shardSpeed * 0.55f,
+                                      0.76f, profile.shardSize * 1.3f );
+                    particles_.emit_shards ( pos, profile.shardCount,
+                                             profile.shardColor, profile.shardSpeed,
+                                             0.78f, profile.shardSize * 1.1f, 420.f );
+
+                    if ( profile.ringOnDestroy )
+                    {
+                        particles_.emit_ring ( pos, 14, profile.sparkColor,
+                                               profile.shardSpeed * 0.62f,
+                                               0.34f, profile.shardSize * 0.92f );
+                    }
+
+                    impact_flash_ =
+                        std::max ( impact_flash_, profile.destroyFlashBoost );
+                }
+            },
+            ev );
+    }
+}
+
 SceneId GameScene::handle_input ( const sf::Event& event )
 {
     if ( pending_scene_ != SceneId::None )
@@ -168,11 +534,16 @@ SceneId GameScene::handle_input ( const sf::Event& event )
     {
         if ( key->code == sf::Keyboard::Key::Backspace )
             return SceneId::Menu;
+
+        if ( key->code == sf::Keyboard::Key::Space )
+            command_queue_.push ( ActivateAbilityCmd{INVALID_ID} );
     }
 
-    if ( snapshot_.status == LevelStatus::Running )
+    if ( snapshot_.status == LevelStatus::Running && window_ptr_ )
     {
-        auto cmd = slingshot_.handle_input ( event, snapshot_.slingshot );
+        apply_letterbox ( game_view_, window_ptr_->getSize() );
+        auto cmd = slingshot_.handle_input ( event, snapshot_.slingshot, *window_ptr_,
+                                             game_view_ );
         if ( cmd.has_value() )
             command_queue_.push ( *cmd );
     }
@@ -182,26 +553,154 @@ SceneId GameScene::handle_input ( const sf::Event& event )
 
 void GameScene::update()
 {
+    const float dt = std::clamp ( frame_clock_.restart().asSeconds(), 0.0f, 1.0f / 30.0f );
+
+    particles_.update ( dt );
+
     if ( snapshot_.status != LevelStatus::Running )
     {
-        if ( pending_scene_ == SceneId::None )
+        end_delay_ += dt;
+        if ( end_delay_ >= 1.5f && pending_scene_ == SceneId::None )
             finish_level();
         return;
     }
 
-    const float dt = std::clamp ( frame_clock_.restart().asSeconds(), 0.0f, 1.0f / 30.0f );
     physics_.processCommands ( command_queue_ );
     physics_.step ( dt );
     snapshot_ = physics_.getSnapshot();
+    process_events();
+
+    for ( const auto& obj : snapshot_.objects )
+    {
+        if ( obj.isActive && obj.kind == ObjectSnapshot::Kind::Projectile )
+        {
+            particles_.emit ( {obj.positionPx.x, obj.positionPx.y}, 2,
+                              projectile_trail_color ( obj.projectileType ),
+                              38.f, 0.20f, 3.5f );
+            break;
+        }
+    }
+
+    if ( shake_time_ > 0.f )
+    {
+        shake_time_ = std::max ( 0.f, shake_time_ - dt );
+        shake_strength_ = std::max ( 0.f, shake_strength_ - dt * 30.f );
+    }
+
+    impact_flash_ = std::max ( 0.f, impact_flash_ - dt * kImpactFlashDecay );
 
     hud_text_.setString ( "Score: " + std::to_string ( snapshot_.score )
-                          + "   [Backspace] Menu" );
+                          + "   [Space] Ability   [Backspace] Menu" );
 }
 
 void GameScene::render ( sf::RenderWindow& window )
 {
-    renderer_.draw_snapshot ( window, snapshot_ );
-    slingshot_.render ( window, snapshot_.slingshot );
+    window_ptr_ = &window;
+    apply_letterbox ( game_view_, window.getSize() );
+
+    if ( world_pass_.getSize() != window.getSize() )
+    {
+        if ( !world_pass_.resize ( window.getSize() ) )
+        {
+            Logger::error ( "GameScene: failed to resize world render target" );
+        }
+        world_pass_.setSmooth ( true );
+
+        if ( bloom_ready_ )
+        {
+            const bool bloom_ok = bloom_extract_pass_.resize ( window.getSize() )
+                                  && bloom_ping_pass_.resize ( window.getSize() )
+                                  && bloom_pong_pass_.resize ( window.getSize() );
+            if ( !bloom_ok )
+            {
+                Logger::error ( "GameScene: failed to resize bloom render targets, bloom disabled" );
+                bloom_ready_ = false;
+            }
+            else
+            {
+                bloom_extract_pass_.setSmooth ( true );
+                bloom_ping_pass_.setSmooth ( true );
+                bloom_pong_pass_.setSmooth ( true );
+            }
+        }
+    }
+
+    // World rendering in game coordinates
+    sf::View world_view = game_view_;
+    if ( shake_time_ > 0.f && shake_strength_ > 0.f )
+    {
+        world_view.move ( {shake_dist_ ( rng_ ) * shake_strength_,
+                           shake_dist_ ( rng_ ) * shake_strength_} );
+    }
+
+    world_pass_.clear ( sf::Color ( 6, 8, 14 ) );
+    world_pass_.setView ( world_view );
+    renderer_.draw_snapshot ( world_pass_, snapshot_ );
+    slingshot_.render ( world_pass_, snapshot_.slingshot );
+    particles_.render ( world_pass_ );
+    world_pass_.display();
+
+    if ( bloom_ready_ )
+    {
+        const sf::Vector2u bloom_size = bloom_extract_pass_.getSize();
+        const float texel_x = 1.f / static_cast<float> ( std::max ( 1u, bloom_size.x ) );
+        const float texel_y = 1.f / static_cast<float> ( std::max ( 1u, bloom_size.y ) );
+
+        bloom_extract_pass_.clear ( sf::Color::Transparent );
+        sf::Sprite extract_source ( world_pass_.getTexture() );
+        sf::RenderStates extract_states;
+        extract_states.shader = &bloom_extract_shader_;
+        bloom_extract_pass_.draw ( extract_source, extract_states );
+        bloom_extract_pass_.display();
+
+        bloom_blur_shader_.setUniform ( "uTexel", sf::Glsl::Vec2 ( texel_x, texel_y ) );
+
+        bloom_ping_pass_.clear ( sf::Color::Transparent );
+        sf::Sprite blur_h_source ( bloom_extract_pass_.getTexture() );
+        bloom_blur_shader_.setUniform ( "uDirection", sf::Glsl::Vec2 ( 1.f, 0.f ) );
+        sf::RenderStates blur_states;
+        blur_states.shader = &bloom_blur_shader_;
+        bloom_ping_pass_.draw ( blur_h_source, blur_states );
+        bloom_ping_pass_.display();
+
+        bloom_pong_pass_.clear ( sf::Color::Transparent );
+        sf::Sprite blur_v_source ( bloom_ping_pass_.getTexture() );
+        bloom_blur_shader_.setUniform ( "uDirection", sf::Glsl::Vec2 ( 0.f, 1.f ) );
+        bloom_pong_pass_.draw ( blur_v_source, blur_states );
+        bloom_pong_pass_.display();
+    }
+
+    window.setView ( window.getDefaultView() );
+    sf::Sprite world_sprite ( world_pass_.getTexture() );
+
+    if ( post_shader_ready_ )
+    {
+        post_shader_.setUniform ( "uTime", visual_clock_.getElapsedTime().asSeconds() );
+        post_shader_.setUniform ( "uVignette", 0.34f );
+        post_shader_.setUniform ( "uFlash", impact_flash_ );
+        sf::RenderStates states;
+        states.shader = &post_shader_;
+        window.draw ( world_sprite, states );
+    }
+    else
+    {
+        window.draw ( world_sprite );
+    }
+
+    if ( bloom_ready_ )
+    {
+        sf::Sprite bloom_sprite ( bloom_pong_pass_.getTexture() );
+        const float boosted_flash = std::clamp ( impact_flash_ * 2.0f, 0.f, 0.5f );
+        const uint8_t bloom_alpha =
+            static_cast<uint8_t> ( 132.f + boosted_flash * 180.f );
+        bloom_sprite.setColor ( sf::Color ( 255, 240, 214, bloom_alpha ) );
+
+        sf::RenderStates bloom_states;
+        bloom_states.blendMode = sf::BlendAdd;
+        window.draw ( bloom_sprite, bloom_states );
+    }
+
+    // HUD in screen coordinates
     renderer_.draw_hud ( window, snapshot_, hud_text_ );
 }
 

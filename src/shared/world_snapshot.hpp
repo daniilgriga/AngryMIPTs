@@ -21,6 +21,7 @@ struct ObjectSnapshot
     Vec2 sizePx;     // width x height (rectangles)
     float radiusPx;  // for circles (0 if rectangle)
     Material material;
+    ProjectileType projectileType = ProjectileType::Standard;
     float hpNormalized;  // 0.0 .. 1.0
     bool isActive;
 };
