@@ -1,7 +1,9 @@
 #include "render/renderer.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cmath>
+#include <string>
 
 namespace angry
 {
@@ -12,6 +14,20 @@ constexpr float kWorldW = 1920.f;
 constexpr float kWorldH = 1080.f;
 constexpr float kGroundY = 700.f;
 
+std::string projectile_label ( ProjectileType type )
+{
+    switch ( type )
+    {
+    case ProjectileType::Heavy:
+        return "Heavy";
+    case ProjectileType::Splitter:
+        return "Splitter";
+    case ProjectileType::Standard:
+    default:
+        return "Standard";
+    }
+}
+
 }  // namespace
 
 void draw_hill ( sf::RenderTarget& target, float cx, float base_y,
@@ -21,41 +37,134 @@ void draw_cloud ( sf::RenderTarget& target, float x, float y, float scale );
 void Renderer::draw_hud ( sf::RenderTarget& target, const WorldSnapshot& snapshot,
                           sf::Text& score_text )
 {
-    score_text.setPosition ( {20.f, 16.f} );
+    static sf::Clock hud_clock;
+    const float t = hud_clock.getElapsedTime().asSeconds();
+    const float pulse = 0.5f + 0.5f * std::sin ( t * 4.2f );
+    const sf::Vector2f ws ( target.getSize() );
+
+    const int total = std::max ( 0, snapshot.totalShots );
+    const int remaining = std::clamp ( snapshot.shotsRemaining, 0, total );
+    const std::string charge_name =
+        remaining > 0 ? projectile_label ( snapshot.slingshot.nextProjectile ) : "--";
+    const std::string charge_label = snapshot.slingshot.canShoot ? "Loaded" : "Next";
+
+    // Top status card
+    const sf::Vector2f card_size ( 420.f, 100.f );
+    const sf::Vector2f card_pos ( 18.f, 16.f );
+
+    sf::RectangleShape card_shadow ( card_size );
+    card_shadow.setPosition ( card_pos + sf::Vector2f ( 6.f, 8.f ) );
+    card_shadow.setFillColor ( sf::Color ( 8, 12, 20, 110 ) );
+    target.draw ( card_shadow );
+
+    sf::RectangleShape card ( card_size );
+    card.setPosition ( card_pos );
+    card.setFillColor ( sf::Color ( 10, 18, 34, 166 ) );
+    card.setOutlineThickness ( 2.2f );
+    card.setOutlineColor ( sf::Color ( 170, 220, 255, 118 ) );
+    target.draw ( card );
+
+    sf::RectangleShape card_accent ( {card_size.x - 8.f, 5.f} );
+    card_accent.setPosition ( card_pos + sf::Vector2f ( 4.f, 4.f ) );
+    card_accent.setFillColor ( sf::Color ( 132, 204, 255, 140 ) );
+    target.draw ( card_accent );
+
+    score_text.setString ( "Score  " + std::to_string ( snapshot.score ) );
+    score_text.setCharacterSize ( 32 );
+    score_text.setStyle ( sf::Text::Bold );
+    score_text.setFillColor ( sf::Color ( 245, 250, 255 ) );
+    score_text.setPosition ( card_pos + sf::Vector2f ( 18.f, 14.f ) );
     target.draw ( score_text );
 
-    const float radius = 10.f;
-    const float spacing = 26.f;
-    const float base_x = 20.f + radius;
-    const float base_y = static_cast<float> ( target.getSize().y ) - 30.f;
+    sf::Text status_text = score_text;
+    status_text.setCharacterSize ( 16 );
+    status_text.setStyle ( sf::Text::Regular );
+    status_text.setFillColor ( sf::Color ( 216, 236, 255, 220 ) );
+    status_text.setString (
+        "Shots  " + std::to_string ( remaining ) + "/" + std::to_string ( total )
+        + "    " + charge_label + "  " + charge_name );
+    status_text.setPosition ( card_pos + sf::Vector2f ( 20.f, 58.f ) );
+    target.draw ( status_text );
 
-    const int total = snapshot.totalShots;
-    const int remaining = snapshot.shotsRemaining;
+    sf::Text controls_text = status_text;
+    controls_text.setCharacterSize ( 14 );
+    controls_text.setFillColor ( sf::Color ( 190, 220, 244,
+                                             static_cast<uint8_t> ( 156.f + pulse * 90.f ) ) );
+    controls_text.setString ( "[Space] Ability   [Backspace] Menu" );
+    controls_text.setPosition ( card_pos + sf::Vector2f ( 20.f, 78.f ) );
+    target.draw ( controls_text );
+
+    // Top-right ammo rail
+    const float radius = 12.f;
+    const float spacing = 34.f;
+    const float rail_w =
+        42.f + static_cast<float> ( std::max ( 1, total ) - 1 ) * spacing + radius * 2.f;
+    const float rail_h = 52.f;
+    const sf::Vector2f rail_pos ( ws.x - rail_w - 18.f, 16.f );
+
+    sf::RectangleShape rail_shadow ( {rail_w, rail_h} );
+    rail_shadow.setPosition ( rail_pos + sf::Vector2f ( 4.f, 6.f ) );
+    rail_shadow.setFillColor ( sf::Color ( 8, 12, 20, 110 ) );
+    target.draw ( rail_shadow );
+
+    sf::RectangleShape rail ( {rail_w, rail_h} );
+    rail.setPosition ( rail_pos );
+    rail.setFillColor ( sf::Color ( 10, 16, 30, 160 ) );
+    rail.setOutlineThickness ( 2.f );
+    rail.setOutlineColor ( sf::Color ( 160, 208, 240, 110 ) );
+    target.draw ( rail );
+
+    sf::RectangleShape rail_accent ( {rail_w - 6.f, 4.f} );
+    rail_accent.setPosition ( rail_pos + sf::Vector2f ( 3.f, 3.f ) );
+    rail_accent.setFillColor ( sf::Color ( 132, 194, 245, 115 ) );
+    target.draw ( rail_accent );
+
+    const float base_x = rail_pos.x + 20.f + radius;
+    const float base_y = rail_pos.y + rail_h * 0.5f;
 
     for ( int i = 0; i < total; ++i )
     {
+        const bool ready_shot = ( i == 0 && snapshot.slingshot.canShoot && i < remaining );
         sf::CircleShape icon ( radius );
         icon.setOrigin ( {radius, radius} );
         icon.setPosition ( {base_x + i * spacing, base_y} );
 
+        sf::CircleShape slot ( radius + 5.f );
+        slot.setOrigin ( {radius + 5.f, radius + 5.f} );
+        slot.setPosition ( icon.getPosition() );
+        slot.setFillColor ( sf::Color ( 255, 255, 255, 18 ) );
+        target.draw ( slot );
+
+        if ( ready_shot )
+        {
+            const float glow_r = radius + 9.f + pulse * 3.f;
+            sf::CircleShape glow ( glow_r );
+            glow.setOrigin ( {glow_r, glow_r} );
+            glow.setPosition ( icon.getPosition() );
+            glow.setFillColor (
+                sf::Color ( 255, 235, 164, static_cast<uint8_t> ( 58.f + pulse * 62.f ) ) );
+            target.draw ( glow );
+        }
+
         if ( i < remaining )
         {
-            if ( i == 0 && snapshot.slingshot.canShoot )
+            if ( ready_shot )
             {
                 icon.setFillColor ( projectile_color ( snapshot.slingshot.nextProjectile ) );
                 icon.setOutlineColor ( projectile_outline ( snapshot.slingshot.nextProjectile ) );
-                icon.setOutlineThickness ( 2.f );
+                icon.setOutlineThickness ( 2.5f );
             }
             else
             {
-                icon.setFillColor ( sf::Color ( 70, 65, 60 ) );
-                icon.setOutlineThickness ( 0.f );
+                icon.setFillColor ( sf::Color ( 112, 104, 92 ) );
+                icon.setOutlineColor ( sf::Color ( 148, 138, 120, 140 ) );
+                icon.setOutlineThickness ( 1.4f );
             }
         }
         else
         {
             icon.setFillColor ( sf::Color::Transparent );
-            icon.setOutlineColor ( sf::Color ( 100, 100, 100, 120 ) );
+            icon.setOutlineColor ( sf::Color ( 124, 132, 148, 130 ) );
             icon.setOutlineThickness ( 2.f );
         }
 
