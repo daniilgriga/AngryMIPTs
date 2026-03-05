@@ -1,6 +1,7 @@
 #include "render/particles.hpp"
 
 #include <algorithm>
+#include <cstddef>
 #include <cmath>
 #include <cstdlib>
 
@@ -8,6 +9,8 @@ namespace angry
 {
 namespace
 {
+
+constexpr std::size_t kParticleHardCap = 2600;
 
 float rand_float ( float lo, float hi )
 {
@@ -20,6 +23,15 @@ float rand_float ( float lo, float hi )
 void ParticleSystem::emit ( sf::Vector2f pos, int count, sf::Color color,
                             float speed, float lifetime, float size )
 {
+    if ( particles_.capacity() < kParticleHardCap )
+        particles_.reserve ( kParticleHardCap );
+
+    const std::size_t available =
+        kParticleHardCap > particles_.size() ? ( kParticleHardCap - particles_.size() ) : 0u;
+    count = std::min ( count, static_cast<int> ( available ) );
+    if ( count <= 0 )
+        return;
+
     for ( int i = 0; i < count; ++i )
     {
         float angle = rand_float ( 0.f, 6.2832f );
@@ -38,6 +50,15 @@ void ParticleSystem::emit ( sf::Vector2f pos, int count, sf::Color color,
 void ParticleSystem::emit_ring ( sf::Vector2f pos, int count, sf::Color color,
                                  float speed, float lifetime, float size )
 {
+    if ( particles_.capacity() < kParticleHardCap )
+        particles_.reserve ( kParticleHardCap );
+
+    const std::size_t available =
+        kParticleHardCap > particles_.size() ? ( kParticleHardCap - particles_.size() ) : 0u;
+    count = std::min ( count, static_cast<int> ( available ) );
+    if ( count <= 0 )
+        return;
+
     for ( int i = 0; i < count; ++i )
     {
         float angle = 6.2832f * static_cast<float> ( i ) / static_cast<float> ( count );
@@ -56,6 +77,15 @@ void ParticleSystem::emit_shards ( sf::Vector2f pos, int count, sf::Color color,
                                    float speed, float lifetime, float size,
                                    float angular_speed )
 {
+    if ( particles_.capacity() < kParticleHardCap )
+        particles_.reserve ( kParticleHardCap );
+
+    const std::size_t available =
+        kParticleHardCap > particles_.size() ? ( kParticleHardCap - particles_.size() ) : 0u;
+    count = std::min ( count, static_cast<int> ( available ) );
+    if ( count <= 0 )
+        return;
+
     for ( int i = 0; i < count; ++i )
     {
         float angle = rand_float ( 0.f, 6.2832f );
@@ -98,14 +128,19 @@ void ParticleSystem::render ( sf::RenderTarget& target )
 {
     for ( const auto& p : particles_ )
     {
-        float alpha = 1.f - ( p.age / p.lifetime );
+        const float alpha = std::clamp ( 1.f - ( p.age / p.lifetime ), 0.f, 1.f );
         float cur_size = p.size * alpha;
+        const float base_alpha = static_cast<float> ( p.color.a ) / 255.f;
 
         sf::Color c = p.color;
-        c.a = static_cast<uint8_t> ( 255.f * alpha * alpha );
 
         if ( p.shape == ParticleShape::Shard )
         {
+            // Keep shards readable longer than dust/sparks so material breakage is visible.
+            cur_size = p.size * ( 0.72f + 0.28f * alpha );
+            c.a = static_cast<uint8_t> (
+                255.f * base_alpha * ( 0.25f + 0.75f * alpha ) );
+
             sf::RectangleShape shard ( {cur_size * 1.6f, cur_size * 0.8f} );
             shard.setOrigin ( {cur_size * 0.8f, cur_size * 0.4f} );
             shard.setPosition ( p.position );
@@ -115,6 +150,7 @@ void ParticleSystem::render ( sf::RenderTarget& target )
         }
         else
         {
+            c.a = static_cast<uint8_t> ( 255.f * base_alpha * alpha * alpha );
             sf::CircleShape dot ( cur_size );
             dot.setOrigin ( {cur_size, cur_size} );
             dot.setPosition ( p.position );
