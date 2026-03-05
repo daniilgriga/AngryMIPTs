@@ -122,23 +122,6 @@ std::string resolveProjectPath( const std::filesystem::path& relativePath )
     return relativePath.string();
 }
 
-sf::Color material_particle_color ( Material mat )
-{
-    switch ( mat )
-    {
-    case Material::Wood:
-        return sf::Color ( 200, 140, 70 );
-    case Material::Stone:
-        return sf::Color ( 170, 170, 170 );
-    case Material::Glass:
-        return sf::Color ( 180, 230, 255 );
-    case Material::Ice:
-        return sf::Color ( 210, 240, 255 );
-    default:
-        return sf::Color ( 200, 200, 200 );
-    }
-}
-
 sf::Color projectile_trail_color ( ProjectileType type )
 {
     switch ( type )
@@ -151,6 +134,155 @@ sf::Color projectile_trail_color ( ProjectileType type )
     default:
         return sf::Color ( 255, 165, 136, 165 );
     }
+}
+
+struct MaterialVfxProfile
+{
+    sf::Color sparkColor;
+    sf::Color dustColor;
+    sf::Color shardColor;
+    float impulseToCount;
+    float hitSpeedScale;
+    int minHitCount;
+    int maxHitCount;
+    int destroyBurstCount;
+    int shardCount;
+    float shardSpeed;
+    float shardSize;
+    float hitFlashBoost;
+    float destroyFlashBoost;
+    bool ringOnHit;
+    bool ringOnDestroy;
+};
+
+const MaterialVfxProfile& vfx_profile ( Material material )
+{
+    static const MaterialVfxProfile wood {
+        sf::Color ( 230, 170, 90 ),
+        sf::Color ( 170, 120, 74, 180 ),
+        sf::Color ( 190, 130, 78 ),
+        1.7f,
+        26.f,
+        4,
+        14,
+        26,
+        9,
+        120.f,
+        5.f,
+        0.07f,
+        0.10f,
+        false,
+        false,
+    };
+
+    static const MaterialVfxProfile stone {
+        sf::Color ( 214, 214, 220 ),
+        sf::Color ( 145, 150, 160, 210 ),
+        sf::Color ( 172, 176, 186 ),
+        1.3f,
+        21.f,
+        3,
+        11,
+        20,
+        6,
+        85.f,
+        4.3f,
+        0.05f,
+        0.08f,
+        false,
+        false,
+    };
+
+    static const MaterialVfxProfile glass {
+        sf::Color ( 220, 245, 255 ),
+        sf::Color ( 170, 226, 255, 170 ),
+        sf::Color ( 204, 240, 255 ),
+        2.2f,
+        32.f,
+        6,
+        20,
+        34,
+        20,
+        210.f,
+        4.2f,
+        0.11f,
+        0.16f,
+        true,
+        true,
+    };
+
+    static const MaterialVfxProfile ice {
+        sf::Color ( 234, 250, 255 ),
+        sf::Color ( 178, 225, 255, 178 ),
+        sf::Color ( 214, 246, 255 ),
+        2.0f,
+        30.f,
+        5,
+        17,
+        30,
+        16,
+        170.f,
+        4.6f,
+        0.09f,
+        0.13f,
+        true,
+        true,
+    };
+
+    switch ( material )
+    {
+    case Material::Stone:
+        return stone;
+    case Material::Glass:
+        return glass;
+    case Material::Ice:
+        return ice;
+    case Material::Wood:
+    default:
+        return wood;
+    }
+}
+
+const ObjectSnapshot* find_snapshot_object ( const WorldSnapshot& snapshot, EntityId id )
+{
+    for ( const auto& object : snapshot.objects )
+    {
+        if ( object.id == id )
+            return &object;
+    }
+    return nullptr;
+}
+
+Material choose_impact_material ( const WorldSnapshot& snapshot, EntityId aId, EntityId bId )
+{
+    const ObjectSnapshot* a = find_snapshot_object ( snapshot, aId );
+    const ObjectSnapshot* b = find_snapshot_object ( snapshot, bId );
+
+    const auto prefer = [] ( const ObjectSnapshot* obj ) -> bool
+    {
+        if ( !obj || !obj->isActive )
+            return false;
+        return obj->kind == ObjectSnapshot::Kind::Block
+               || obj->kind == ObjectSnapshot::Kind::Target;
+    };
+
+    if ( prefer ( a ) && prefer ( b ) )
+    {
+        if ( a->material == Material::Glass || b->material == Material::Glass )
+            return Material::Glass;
+        if ( a->material == Material::Ice || b->material == Material::Ice )
+            return Material::Ice;
+        if ( a->material == Material::Stone || b->material == Material::Stone )
+            return Material::Stone;
+        return a->material;
+    }
+
+    if ( prefer ( a ) )
+        return a->material;
+    if ( prefer ( b ) )
+        return b->material;
+
+    return Material::Wood;
 }
 
 }  // namespace
@@ -320,10 +452,31 @@ void GameScene::process_events()
                 if constexpr ( std::is_same_v<T, CollisionEvent> )
                 {
                     sf::Vector2f pos ( e.contactPointPx.x, e.contactPointPx.y );
-                    int count = std::clamp ( static_cast<int> ( e.impulse * 2.f ), 3, 15 );
-                    float speed = std::clamp ( e.impulse * 30.f, 40.f, 200.f );
-                    particles_.emit ( pos, count,
-                                      sf::Color ( 255, 220, 150 ), speed, 0.4f, 3.f );
+                    const Material impactMaterial =
+                        choose_impact_material ( snapshot_, e.aId, e.bId );
+                    const MaterialVfxProfile& profile = vfx_profile ( impactMaterial );
+
+                    const int count = std::clamp (
+                        static_cast<int> ( e.impulse * profile.impulseToCount ),
+                        profile.minHitCount, profile.maxHitCount );
+                    const float speed =
+                        std::clamp ( e.impulse * profile.hitSpeedScale, 36.f, 240.f );
+
+                    particles_.emit ( pos, count, profile.sparkColor, speed, 0.38f, 3.2f );
+                    particles_.emit ( pos, count / 2, profile.dustColor, speed * 0.65f,
+                                      0.52f, 4.8f );
+
+                    if ( profile.ringOnHit )
+                    {
+                        particles_.emit_ring ( pos, 10, profile.sparkColor,
+                                               std::clamp ( speed * 0.55f, 55.f, 130.f ),
+                                               0.30f, 2.8f );
+                    }
+
+                    particles_.emit_shards (
+                        pos, std::max ( 2, count / 2 ), profile.shardColor,
+                        std::clamp ( profile.shardSpeed * ( e.impulse / 10.f ), 45.f, 220.f ),
+                        0.48f, profile.shardSize, 320.f );
 
                     const float impulse = std::clamp ( e.impulse, 0.f, 30.f );
                     if ( impulse > 1.2f )
@@ -334,15 +487,34 @@ void GameScene::process_events()
                         shake_strength_ =
                             std::max ( shake_strength_, std::clamp ( impulse * 0.55f, 2.f, 14.f ) );
                         impact_flash_ =
-                            std::max ( impact_flash_, std::clamp ( impulse * 0.03f, 0.04f, 0.26f ) );
+                            std::max ( impact_flash_, std::clamp (
+                                impulse * profile.hitFlashBoost, 0.03f, 0.30f ) );
                     }
                 }
                 else if constexpr ( std::is_same_v<T, DestroyedEvent> )
                 {
                     sf::Vector2f pos ( e.positionPx.x, e.positionPx.y );
-                    sf::Color color = material_particle_color ( e.material );
-                    particles_.emit ( pos, 20, color, 150.f, 0.6f, 4.f );
-                    impact_flash_ = std::max ( impact_flash_, 0.08f );
+                    const MaterialVfxProfile& profile = vfx_profile ( e.material );
+
+                    particles_.emit ( pos, profile.destroyBurstCount,
+                                      profile.sparkColor, profile.shardSpeed,
+                                      0.58f, profile.shardSize );
+                    particles_.emit ( pos, profile.destroyBurstCount / 2,
+                                      profile.dustColor, profile.shardSpeed * 0.55f,
+                                      0.76f, profile.shardSize * 1.3f );
+                    particles_.emit_shards ( pos, profile.shardCount,
+                                             profile.shardColor, profile.shardSpeed,
+                                             0.78f, profile.shardSize * 1.1f, 420.f );
+
+                    if ( profile.ringOnDestroy )
+                    {
+                        particles_.emit_ring ( pos, 14, profile.sparkColor,
+                                               profile.shardSpeed * 0.62f,
+                                               0.34f, profile.shardSize * 0.92f );
+                    }
+
+                    impact_flash_ =
+                        std::max ( impact_flash_, profile.destroyFlashBoost );
                 }
             },
             ev );
