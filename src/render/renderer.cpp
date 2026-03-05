@@ -28,13 +28,23 @@ void Renderer::draw_hud ( sf::RenderWindow& window, const WorldSnapshot& snapsho
 
         if ( i < remaining )
         {
-            icon.setFillColor ( sf::Color ( 50, 50, 50 ) );
-            icon.setOutlineThickness ( 0.f );
+            // first remaining icon shows next projectile type
+            if ( i == 0 && snapshot.slingshot.canShoot )
+            {
+                icon.setFillColor ( projectile_color ( snapshot.slingshot.nextProjectile ) );
+                icon.setOutlineColor ( projectile_outline ( snapshot.slingshot.nextProjectile ) );
+                icon.setOutlineThickness ( 2.f );
+            }
+            else
+            {
+                icon.setFillColor ( sf::Color ( 70, 65, 60 ) );
+                icon.setOutlineThickness ( 0.f );
+            }
         }
         else
         {
             icon.setFillColor ( sf::Color::Transparent );
-            icon.setOutlineColor ( sf::Color ( 100, 100, 100 ) );
+            icon.setOutlineColor ( sf::Color ( 100, 100, 100, 120 ) );
             icon.setOutlineThickness ( 2.f );
         }
 
@@ -83,9 +93,22 @@ void Renderer::draw_object ( sf::RenderWindow& window, const ObjectSnapshot& obj
         shape.setPosition ( {obj.positionPx.x, obj.positionPx.y} );
         shape.setRotation ( sf::degrees ( obj.angleDeg ) );
 
-        sf::Color color = ( obj.kind == ObjectSnapshot::Kind::Block )
-                              ? material_color ( obj.material )
-                              : kind_color ( obj.kind );
+        sf::Color color;
+        if ( obj.kind == ObjectSnapshot::Kind::Projectile )
+        {
+            color = projectile_color ( obj.projectileType );
+            shape.setOutlineColor ( projectile_outline ( obj.projectileType ) );
+            shape.setOutlineThickness ( 2.f );
+        }
+        else if ( obj.kind == ObjectSnapshot::Kind::Block )
+        {
+            color = material_color ( obj.material );
+        }
+        else
+        {
+            color = kind_color ( obj.kind );
+        }
+
         if ( uses_hp )
             color = tint_by_hp ( color, obj.hpNormalized );
         shape.setFillColor ( color );
@@ -100,9 +123,14 @@ void Renderer::draw_object ( sf::RenderWindow& window, const ObjectSnapshot& obj
         shape.setRotation ( sf::degrees ( obj.angleDeg ) );
 
         sf::Color color;
-        if ( obj.kind == ObjectSnapshot::Kind::Target
-             || obj.kind == ObjectSnapshot::Kind::Projectile )
+        if ( obj.kind == ObjectSnapshot::Kind::Target )
             color = kind_color ( obj.kind );
+        else if ( obj.kind == ObjectSnapshot::Kind::Projectile )
+        {
+            color = projectile_color ( obj.projectileType );
+            shape.setOutlineColor ( projectile_outline ( obj.projectileType ) );
+            shape.setOutlineThickness ( 2.f );
+        }
         else
             color = material_color ( obj.material );
         if ( uses_hp )
@@ -163,6 +191,32 @@ sf::Color Renderer::kind_color ( ObjectSnapshot::Kind kind )
         return sf::Color ( 120, 120, 120 );
     default:
         return sf::Color::White;
+    }
+}
+
+sf::Color Renderer::projectile_color ( ProjectileType type )
+{
+    switch ( type )
+    {
+    case ProjectileType::Heavy:
+        return sf::Color ( 45, 35, 55 );
+    case ProjectileType::Splitter:
+        return sf::Color ( 40, 70, 110 );
+    default:
+        return sf::Color ( 60, 55, 50 );
+    }
+}
+
+sf::Color Renderer::projectile_outline ( ProjectileType type )
+{
+    switch ( type )
+    {
+    case ProjectileType::Heavy:
+        return sf::Color ( 140, 80, 180 );
+    case ProjectileType::Splitter:
+        return sf::Color ( 80, 160, 220 );
+    default:
+        return sf::Color ( 120, 110, 100 );
     }
 }
 

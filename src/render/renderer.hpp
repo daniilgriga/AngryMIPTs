@@ -20,6 +20,8 @@ private:
 
     sf::Color material_color ( Material mat );
     sf::Color kind_color ( ObjectSnapshot::Kind kind );
+    sf::Color projectile_color ( ProjectileType type );
+    sf::Color projectile_outline ( ProjectileType type );
     sf::Color tint_by_hp ( sf::Color base, float hp );
 };
 

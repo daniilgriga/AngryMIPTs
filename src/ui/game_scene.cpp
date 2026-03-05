@@ -54,32 +54,32 @@ WorldSnapshot GameScene::make_mock_snapshot()
     // ground
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {640.f, 700.f}, 0.f, {1280.f, 40.f}, 0.f,
-                              Material::Stone, 1.f, true} );
+                              Material::Stone, ProjectileType::Standard, 1.f, true} );
 
     // left pillar
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {800.f, 580.f}, 0.f, {20.f, 100.f}, 0.f,
-                              Material::Wood, 1.f, true} );
+                              Material::Wood, ProjectileType::Standard, 1.f, true} );
 
     // right pillar
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {900.f, 580.f}, 0.f, {20.f, 100.f}, 0.f,
-                              Material::Wood, 1.f, true} );
+                              Material::Wood, ProjectileType::Standard, 1.f, true} );
 
     // top beam
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {850.f, 520.f}, 0.f, {140.f, 20.f}, 0.f,
-                              Material::Wood, 0.8f, true} );
+                              Material::Wood, ProjectileType::Standard, 0.8f, true} );
 
     // glass block on top
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
                               {850.f, 500.f}, 0.f, {60.f, 20.f}, 0.f,
-                              Material::Glass, 1.f, true} );
+                              Material::Glass, ProjectileType::Standard, 1.f, true} );
 
     // target (circle)
     snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Target,
                               {850.f, 560.f}, 0.f, {0.f, 0.f}, 15.f,
-                              Material::Wood, 1.f, true} );
+                              Material::Wood, ProjectileType::Standard, 1.f, true} );
 
     return snap;
 }
