@@ -140,6 +140,18 @@ sf::Color projectile_trail_color ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Dasher:
+        return sf::Color ( 255, 210, 132, 172 );
+    case ProjectileType::Bomber:
+        return sf::Color ( 255, 178, 102, 180 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 166, 236, 208, 170 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 220, 244, 160, 168 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 176, 234, 255, 175 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 255, 194, 224, 176 );
     case ProjectileType::Heavy:
         return sf::Color ( 186, 145, 240, 170 );
     case ProjectileType::Splitter:
@@ -154,6 +166,18 @@ sf::Color ability_core_color ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Bomber:
+        return sf::Color ( 255, 206, 132 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 214, 255, 236 );
+    case ProjectileType::Dasher:
+        return sf::Color ( 255, 220, 160 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 236, 255, 178 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 214, 248, 255 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 255, 220, 238 );
     case ProjectileType::Heavy:
         return sf::Color ( 196, 146, 255 );
     case ProjectileType::Splitter:
@@ -168,6 +192,18 @@ sf::Color ability_glow_color ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Bomber:
+        return sf::Color ( 255, 148, 76, 228 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 78, 196, 162, 220 );
+    case ProjectileType::Dasher:
+        return sf::Color ( 248, 162, 70, 220 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 170, 214, 86, 220 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 98, 194, 240, 220 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 232, 120, 176, 220 );
     case ProjectileType::Heavy:
         return sf::Color ( 112, 76, 196, 220 );
     case ProjectileType::Splitter:
@@ -219,6 +255,84 @@ AbilityVfxProfile ability_vfx_profile ( ProjectileType type )
             138.f, 0.52f, 5.4f, 380.f,
             0.14f, 6.8f, 0.16f,
             true  // burst is glow, shards are core
+        };
+    case ProjectileType::Bomber:
+        return {
+            28,
+            214.f, 0.26f, 5.4f,
+            16,
+            132.f, 0.34f, 4.3f,
+            40,
+            228.f, 0.46f, 5.4f,
+            18,
+            206.f, 0.72f, 5.8f, 760.f,
+            0.16f, 7.4f, 0.22f,
+            true
+        };
+    case ProjectileType::Dropper:
+        return {
+            16,
+            122.f, 0.20f, 3.8f,
+            10,
+            88.f, 0.28f, 3.0f,
+            24,
+            170.f, 0.38f, 4.1f,
+            14,
+            192.f, 0.50f, 4.2f, 560.f,
+            0.11f, 4.8f, 0.13f,
+            false
+        };
+    case ProjectileType::Dasher:
+        return {
+            14,
+            154.f, 0.16f, 3.2f,
+            0,
+            0.f, 0.f, 0.f,
+            14,
+            198.f, 0.24f, 3.4f,
+            8,
+            210.f, 0.30f, 3.1f, 520.f,
+            0.08f, 4.9f, 0.10f,
+            true
+        };
+    case ProjectileType::Boomerang:
+        return {
+            16,
+            132.f, 0.19f, 3.6f,
+            8,
+            88.f, 0.28f, 3.1f,
+            16,
+            165.f, 0.30f, 3.7f,
+            10,
+            174.f, 0.42f, 3.5f, 460.f,
+            0.09f, 4.5f, 0.12f,
+            false
+        };
+    case ProjectileType::Bubbler:
+        return {
+            18,
+            110.f, 0.24f, 3.9f,
+            14,
+            72.f, 0.34f, 3.3f,
+            20,
+            128.f, 0.36f, 3.8f,
+            12,
+            142.f, 0.50f, 3.6f, 420.f,
+            0.09f, 4.2f, 0.12f,
+            false
+        };
+    case ProjectileType::Inflater:
+        return {
+            20,
+            126.f, 0.26f, 4.3f,
+            10,
+            84.f, 0.34f, 3.7f,
+            22,
+            150.f, 0.40f, 4.2f,
+            10,
+            160.f, 0.54f, 3.8f, 500.f,
+            0.10f, 4.5f, 0.13f,
+            false
         };
     case ProjectileType::Splitter:
         return {
@@ -764,6 +878,20 @@ void GameScene::process_events()
                     particles_.emit_shards ( pos, cfg.shardCount, shardColor,
                                              cfg.shardSpeed, cfg.shardLifetime,
                                              cfg.shardSize, cfg.shardAngularSpeed );
+
+                    if ( e.projectileType == ProjectileType::Bomber )
+                    {
+                        particles_.emit_ring ( pos, 22, glow, 176.f, 0.34f, 6.2f );
+                        particles_.emit ( pos, 16, sf::Color ( 255, 212, 166, 188 ),
+                                          148.f, 0.56f, 5.2f );
+                    }
+                    else if ( e.projectileType == ProjectileType::Dropper )
+                    {
+                        particles_.emit_ring ( pos + sf::Vector2f ( 0.f, 14.f ), 12, glow,
+                                               116.f, 0.26f, 3.6f );
+                        particles_.emit ( pos + sf::Vector2f ( 0.f, 16.f ), 12, core,
+                                          106.f, 0.42f, 3.9f );
+                    }
 
                     shake_time_ = std::max ( shake_time_, cfg.shakeTime );
                     shake_strength_ = std::max ( shake_strength_, cfg.shakeStrength );

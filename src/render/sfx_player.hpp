@@ -15,6 +15,9 @@ class SfxPlayer
 private:
     sf::SoundBuffer heavy_ability_;
     sf::SoundBuffer splitter_ability_;
+    sf::SoundBuffer bomber_ability_;
+    sf::SoundBuffer dropper_ability_;
+    sf::SoundBuffer generic_ability_;
     sf::SoundBuffer wood_destroy_;
     sf::SoundBuffer stone_destroy_;
     sf::SoundBuffer glass_destroy_;

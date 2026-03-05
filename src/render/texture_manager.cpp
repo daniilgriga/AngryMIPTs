@@ -217,6 +217,175 @@ void TextureManager::generate_all()
             canvas.draw ( bar_v );
         } );
 
+    textures_["proj_dasher"] = render_texture (
+        "proj_dasher",
+        [] ( sf::RenderTexture& canvas )
+        {
+            sf::CircleShape body ( 104.f );
+            body.setOrigin ( {104.f, 104.f} );
+            body.setPosition ( {128.f, 128.f} );
+            body.setFillColor ( sf::Color ( 242, 156, 66 ) );
+            body.setOutlineThickness ( 10.f );
+            body.setOutlineColor ( sf::Color ( 154, 82, 28 ) );
+            canvas.draw ( body );
+
+            sf::ConvexShape chevron ( 3 );
+            chevron.setPoint ( 0, {0.f, 0.f} );
+            chevron.setPoint ( 1, {62.f, 18.f} );
+            chevron.setPoint ( 2, {0.f, 36.f} );
+            chevron.setFillColor ( sf::Color ( 255, 233, 178, 225 ) );
+            chevron.setPosition ( {102.f, 110.f} );
+            canvas.draw ( chevron );
+            chevron.setPosition ( {126.f, 110.f} );
+            canvas.draw ( chevron );
+        } );
+
+    textures_["proj_bomber"] = render_texture (
+        "proj_bomber",
+        [] ( sf::RenderTexture& canvas )
+        {
+            sf::CircleShape body ( 104.f );
+            body.setOrigin ( {104.f, 104.f} );
+            body.setPosition ( {128.f, 128.f} );
+            body.setFillColor ( sf::Color ( 76, 78, 90 ) );
+            body.setOutlineThickness ( 12.f );
+            body.setOutlineColor ( sf::Color ( 38, 40, 50 ) );
+            canvas.draw ( body );
+
+            sf::CircleShape ring ( 60.f );
+            ring.setOrigin ( {60.f, 60.f} );
+            ring.setPosition ( {128.f, 136.f} );
+            ring.setFillColor ( sf::Color::Transparent );
+            ring.setOutlineThickness ( 10.f );
+            ring.setOutlineColor ( sf::Color ( 255, 168, 76, 220 ) );
+            canvas.draw ( ring );
+
+            sf::RectangleShape fuse ( {18.f, 52.f} );
+            fuse.setOrigin ( {9.f, 50.f} );
+            fuse.setPosition ( {176.f, 64.f} );
+            fuse.setRotation ( sf::degrees ( 20.f ) );
+            fuse.setFillColor ( sf::Color ( 232, 210, 176 ) );
+            canvas.draw ( fuse );
+
+            sf::CircleShape spark ( 10.f );
+            spark.setOrigin ( {10.f, 10.f} );
+            spark.setPosition ( {192.f, 28.f} );
+            spark.setFillColor ( sf::Color ( 255, 228, 120, 220 ) );
+            canvas.draw ( spark );
+        } );
+
+    textures_["proj_dropper"] = render_texture (
+        "proj_dropper",
+        [] ( sf::RenderTexture& canvas )
+        {
+            sf::CircleShape body ( 104.f );
+            body.setOrigin ( {104.f, 104.f} );
+            body.setPosition ( {128.f, 128.f} );
+            body.setFillColor ( sf::Color ( 80, 184, 146 ) );
+            body.setOutlineThickness ( 10.f );
+            body.setOutlineColor ( sf::Color ( 44, 116, 92 ) );
+            canvas.draw ( body );
+
+            sf::RectangleShape shaft ( {20.f, 72.f} );
+            shaft.setOrigin ( {10.f, 36.f} );
+            shaft.setPosition ( {128.f, 128.f} );
+            shaft.setFillColor ( sf::Color ( 216, 255, 238, 210 ) );
+            canvas.draw ( shaft );
+
+            sf::ConvexShape arrow ( 3 );
+            arrow.setPoint ( 0, {0.f, 0.f} );
+            arrow.setPoint ( 1, {54.f, 0.f} );
+            arrow.setPoint ( 2, {27.f, 34.f} );
+            arrow.setFillColor ( sf::Color ( 216, 255, 238, 220 ) );
+            arrow.setPosition ( {101.f, 148.f} );
+            canvas.draw ( arrow );
+        } );
+
+    textures_["proj_boomerang"] = render_texture (
+        "proj_boomerang",
+        [] ( sf::RenderTexture& canvas )
+        {
+            sf::CircleShape body ( 104.f );
+            body.setOrigin ( {104.f, 104.f} );
+            body.setPosition ( {128.f, 128.f} );
+            body.setFillColor ( sf::Color ( 150, 190, 76 ) );
+            body.setOutlineThickness ( 10.f );
+            body.setOutlineColor ( sf::Color ( 88, 122, 42 ) );
+            canvas.draw ( body );
+
+            sf::RectangleShape arm_a ( {70.f, 18.f} );
+            arm_a.setOrigin ( {8.f, 9.f} );
+            arm_a.setPosition ( {106.f, 116.f} );
+            arm_a.setRotation ( sf::degrees ( -28.f ) );
+            arm_a.setFillColor ( sf::Color ( 240, 252, 196, 214 ) );
+            canvas.draw ( arm_a );
+
+            sf::RectangleShape arm_b ( {70.f, 18.f} );
+            arm_b.setOrigin ( {8.f, 9.f} );
+            arm_b.setPosition ( {106.f, 144.f} );
+            arm_b.setRotation ( sf::degrees ( 30.f ) );
+            arm_b.setFillColor ( sf::Color ( 240, 252, 196, 214 ) );
+            canvas.draw ( arm_b );
+        } );
+
+    textures_["proj_bubbler"] = render_texture (
+        "proj_bubbler",
+        [] ( sf::RenderTexture& canvas )
+        {
+            sf::CircleShape body ( 104.f );
+            body.setOrigin ( {104.f, 104.f} );
+            body.setPosition ( {128.f, 128.f} );
+            body.setFillColor ( sf::Color ( 86, 190, 236 ) );
+            body.setOutlineThickness ( 10.f );
+            body.setOutlineColor ( sf::Color ( 44, 116, 152 ) );
+            canvas.draw ( body );
+
+            for ( int i = 0; i < 4; ++i )
+            {
+                const float radius = 13.f + i * 4.f;
+                sf::CircleShape bubble ( radius );
+                bubble.setOrigin ( {radius, radius} );
+                bubble.setPosition ( {90.f + i * 28.f, 86.f + ( i % 2 ) * 22.f} );
+                bubble.setFillColor ( sf::Color ( 230, 248, 255, 74 ) );
+                bubble.setOutlineThickness ( 2.f );
+                bubble.setOutlineColor ( sf::Color ( 235, 251, 255, 178 ) );
+                canvas.draw ( bubble );
+            }
+        } );
+
+    textures_["proj_inflater"] = render_texture (
+        "proj_inflater",
+        [] ( sf::RenderTexture& canvas )
+        {
+            sf::CircleShape body ( 104.f );
+            body.setOrigin ( {104.f, 104.f} );
+            body.setPosition ( {128.f, 128.f} );
+            body.setFillColor ( sf::Color ( 230, 112, 168 ) );
+            body.setOutlineThickness ( 10.f );
+            body.setOutlineColor ( sf::Color ( 146, 56, 104 ) );
+            canvas.draw ( body );
+
+            sf::CircleShape ring ( 58.f );
+            ring.setOrigin ( {58.f, 58.f} );
+            ring.setPosition ( {128.f, 128.f} );
+            ring.setFillColor ( sf::Color::Transparent );
+            ring.setOutlineThickness ( 7.f );
+            ring.setOutlineColor ( sf::Color ( 255, 214, 232, 195 ) );
+            canvas.draw ( ring );
+
+            sf::RectangleShape plus_h ( {62.f, 14.f} );
+            plus_h.setOrigin ( {31.f, 7.f} );
+            plus_h.setPosition ( {128.f, 128.f} );
+            plus_h.setFillColor ( sf::Color ( 255, 230, 242, 220 ) );
+            canvas.draw ( plus_h );
+
+            sf::RectangleShape plus_v ( {14.f, 62.f} );
+            plus_v.setOrigin ( {7.f, 31.f} );
+            plus_v.setPosition ( {128.f, 128.f} );
+            plus_v.setFillColor ( sf::Color ( 255, 230, 242, 220 ) );
+            canvas.draw ( plus_v );
+        } );
+
     textures_["target"] = render_texture (
         "target",
         [] ( sf::RenderTexture& canvas )
@@ -301,6 +470,18 @@ const sf::Texture& TextureManager::projectile ( ProjectileType type )
         return get ( "proj_heavy" );
     case ProjectileType::Splitter:
         return get ( "proj_splitter" );
+    case ProjectileType::Dasher:
+        return get ( "proj_dasher" );
+    case ProjectileType::Bomber:
+        return get ( "proj_bomber" );
+    case ProjectileType::Dropper:
+        return get ( "proj_dropper" );
+    case ProjectileType::Boomerang:
+        return get ( "proj_boomerang" );
+    case ProjectileType::Bubbler:
+        return get ( "proj_bubbler" );
+    case ProjectileType::Inflater:
+        return get ( "proj_inflater" );
     case ProjectileType::Standard:
     default:
         return get ( "proj_standard" );

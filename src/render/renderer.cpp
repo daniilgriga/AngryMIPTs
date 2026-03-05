@@ -19,6 +19,18 @@ std::string projectile_label ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Dasher:
+        return "Dasher";
+    case ProjectileType::Bomber:
+        return "Bomber";
+    case ProjectileType::Dropper:
+        return "Dropper";
+    case ProjectileType::Boomerang:
+        return "Boomerang";
+    case ProjectileType::Bubbler:
+        return "Bubbler";
+    case ProjectileType::Inflater:
+        return "Inflater";
     case ProjectileType::Heavy:
         return "Heavy";
     case ProjectileType::Splitter:
@@ -461,6 +473,18 @@ sf::Color Renderer::projectile_color ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Dasher:
+        return sf::Color ( 246, 164, 74 );
+    case ProjectileType::Bomber:
+        return sf::Color ( 86, 90, 104 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 88, 188, 152 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 156, 196, 82 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 92, 194, 236 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 234, 120, 174 );
     case ProjectileType::Heavy:
         return sf::Color ( 80, 40, 120 );
     case ProjectileType::Splitter:
@@ -474,6 +498,18 @@ sf::Color Renderer::projectile_outline ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Dasher:
+        return sf::Color ( 255, 212, 142 );
+    case ProjectileType::Bomber:
+        return sf::Color ( 255, 180, 102 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 180, 246, 218 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 226, 248, 170 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 196, 242, 255 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 255, 212, 230 );
     case ProjectileType::Heavy:
         return sf::Color ( 160, 100, 220 );
     case ProjectileType::Splitter:

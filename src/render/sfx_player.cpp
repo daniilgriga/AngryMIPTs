@@ -18,6 +18,9 @@ SfxPlayer::SfxPlayer()
 {
     heavy_ability_ = make_chirp ( 0.18f, 230.f, 95.f, 0.18f, 0.85f, 1.85f );
     splitter_ability_ = make_chirp ( 0.16f, 520.f, 810.f, 0.10f, 0.75f, 1.45f );
+    bomber_ability_ = make_chirp ( 0.22f, 140.f, 58.f, 0.52f, 0.92f, 2.25f );
+    dropper_ability_ = make_chirp ( 0.19f, 380.f, 132.f, 0.24f, 0.82f, 1.75f );
+    generic_ability_ = make_chirp ( 0.14f, 320.f, 470.f, 0.12f, 0.68f, 1.35f );
     wood_destroy_ = make_chirp ( 0.11f, 180.f, 110.f, 0.42f, 0.78f, 1.8f );
     stone_destroy_ = make_chirp ( 0.14f, 150.f, 70.f, 0.36f, 0.88f, 1.95f );
     glass_destroy_ = make_chirp ( 0.12f, 780.f, 420.f, 0.24f, 0.80f, 1.5f );
@@ -91,6 +94,18 @@ void SfxPlayer::play_ability ( ProjectileType projectile_type )
         break;
     case ProjectileType::Splitter:
         play ( splitter_ability_, 56.f, 1.06f );
+        break;
+    case ProjectileType::Bomber:
+        play ( bomber_ability_, 64.f, 0.90f );
+        break;
+    case ProjectileType::Dropper:
+        play ( dropper_ability_, 59.f, 0.94f );
+        break;
+    case ProjectileType::Dasher:
+    case ProjectileType::Boomerang:
+    case ProjectileType::Bubbler:
+    case ProjectileType::Inflater:
+        play ( generic_ability_, 50.f, 1.05f );
         break;
     case ProjectileType::Standard:
     default:
