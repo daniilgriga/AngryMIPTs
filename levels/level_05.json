@@ -1,783 +1,783 @@
 {
-  "meta": {
-    "id": 5,
-    "name": "physics_debug_original_birds",
-    "totalShots": 9,
-    "starThresholds": [
-      1,
-      2,
-      3
-    ]
-  },
-  "slingshot": {
-    "position": [
-      405,
-      720
+    "meta": {
+        "id": 5,
+        "name": "physics_debug_original_birds",
+        "totalShots": 9,
+        "starThresholds": [
+            1,
+            2,
+            3
+        ]
+    },
+    "slingshot": {
+        "position": [
+            405,
+            720
+        ],
+        "maxPull": 200
+    },
+    "projectiles": [
+        {
+            "type": "Standart"
+        },
+        {
+            "type": "Splitter"
+        },
+        {
+            "type": "Dasher"
+        },
+        {
+            "type": "Bomber"
+        },
+        {
+            "type": "Dropper"
+        },
+        {
+            "type": "Boomerang"
+        },
+        {
+            "type": "Heavy"
+        },
+        {
+            "type": "Bubbler"
+        },
+        {
+            "type": "Inflater"
+        }
     ],
-    "maxPull": 200
-  },
-  "projectiles": [
-    {
-      "type": "Striker"
-    },
-    {
-      "type": "Splitter"
-    },
-    {
-      "type": "Dasher"
-    },
-    {
-      "type": "Bomber"
-    },
-    {
-      "type": "Dropper"
-    },
-    {
-      "type": "Boomerang"
-    },
-    {
-      "type": "Crusher"
-    },
-    {
-      "type": "Bubbler"
-    },
-    {
-      "type": "Inflater"
-    }
-  ],
-  "blocks": [
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        920,
-        715
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        80,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1000,
-        715
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        80,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        940,
-        700
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        940,
-        680
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        980,
-        700
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        980,
-        680
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1020,
-        700
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1020,
-        680
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1020,
-        660
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1020,
-        640
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1060,
-        660
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1060,
-        640
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1100,
-        660
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1100,
-        640
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1080,
-        675
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        80,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1090,
-        700
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        20,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1110,
-        700
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        20,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Glass",
-      "position": [
-        1070,
-        710
-      ],
-      "angle": 0,
-      "hp": 35,
-      "size": [
-        20,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1010,
-        610
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        20,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1070,
-        610
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        20,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1040,
-        585
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        80,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1010,
-        560
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        20,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1070,
-        560
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        20,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1040,
-        535
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        80,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1040,
-        510
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        20,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        735,
-        680
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        10,
-        80
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        835,
-        680
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        10,
-        80
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        900,
-        705
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        905,
-        695
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        30,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        910,
-        685
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        20,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        915,
-        675
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        10,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1055,
-        700
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        10,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1075,
-        690
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        10,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1100,
-        625
-      ],
-      "angle": 90,
-      "hp": 50,
-      "size": [
-        10,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1095,
-        615
-      ],
-      "angle": 90,
-      "hp": 50,
-      "size": [
-        10,
-        30
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1090,
-        605
-      ],
-      "angle": 90,
-      "hp": 50,
-      "size": [
-        10,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        1085,
-        595
-      ],
-      "angle": 90,
-      "hp": 50,
-      "size": [
-        10,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        980,
-        665
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        40,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        985,
-        655
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        30,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        990,
-        645
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        20,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Wood",
-      "position": [
-        995,
-        635
-      ],
-      "angle": 0,
-      "hp": 50,
-      "size": [
-        10,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1025,
-        510
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        10,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1005,
-        525
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        30,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1015,
-        510
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        10,
-        20
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1005,
-        515
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        10,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1055,
-        510
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        10,
-        40
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1075,
-        525
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        30,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1075,
-        515
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        10,
-        10
-      ]
-    },
-    {
-      "shape": "rect",
-      "material": "Stone",
-      "position": [
-        1065,
-        510
-      ],
-      "angle": 0,
-      "hp": 90,
-      "size": [
-        10,
-        20
-      ]
-    }
-  ],
-  "targets": [
-    {
-      "position": [
-        760,
-        710
-      ],
-      "radius": 10,
-      "hp": 20,
-      "score": 1000
-    },
-    {
-      "position": [
-        795,
-        705
-      ],
-      "radius": 15,
-      "hp": 20,
-      "score": 1000
-    },
-    {
-      "position": [
-        940,
-        660
-      ],
-      "radius": 10,
-      "hp": 20,
-      "score": 1000
-    },
-    {
-      "position": [
-        1040,
-        615
-      ],
-      "radius": 15,
-      "hp": 20,
-      "score": 1000
-    },
-    {
-      "position": [
-        1040,
-        570
-      ],
-      "radius": 10,
-      "hp": 20,
-      "score": 1000
-    }
-  ]
+    "blocks": [
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                920,
+                715
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                80,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1000,
+                715
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                80,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                940,
+                700
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                940,
+                680
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                980,
+                700
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                980,
+                680
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1020,
+                700
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1020,
+                680
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1020,
+                660
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1020,
+                640
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1060,
+                660
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1060,
+                640
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1100,
+                660
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1100,
+                640
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1080,
+                675
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                80,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1090,
+                700
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                20,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1110,
+                700
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                20,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Glass",
+            "position": [
+                1070,
+                710
+            ],
+            "angle": 0,
+            "hp": 35,
+            "size": [
+                20,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1010,
+                610
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                20,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1070,
+                610
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                20,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1040,
+                585
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                80,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1010,
+                560
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                20,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1070,
+                560
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                20,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1040,
+                535
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                80,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1040,
+                510
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                20,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                735,
+                680
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                10,
+                80
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                835,
+                680
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                10,
+                80
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                900,
+                705
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                905,
+                695
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                30,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                910,
+                685
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                20,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                915,
+                675
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                10,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1055,
+                700
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                10,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1075,
+                690
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                10,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1100,
+                625
+            ],
+            "angle": 90,
+            "hp": 50,
+            "size": [
+                10,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1095,
+                615
+            ],
+            "angle": 90,
+            "hp": 50,
+            "size": [
+                10,
+                30
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1090,
+                605
+            ],
+            "angle": 90,
+            "hp": 50,
+            "size": [
+                10,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                1085,
+                595
+            ],
+            "angle": 90,
+            "hp": 50,
+            "size": [
+                10,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                980,
+                665
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                40,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                985,
+                655
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                30,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                990,
+                645
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                20,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Wood",
+            "position": [
+                995,
+                635
+            ],
+            "angle": 0,
+            "hp": 50,
+            "size": [
+                10,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1025,
+                510
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                10,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1005,
+                525
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                30,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1015,
+                510
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                10,
+                20
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1005,
+                515
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                10,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1055,
+                510
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                10,
+                40
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1075,
+                525
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                30,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1075,
+                515
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                10,
+                10
+            ]
+        },
+        {
+            "shape": "rect",
+            "material": "Stone",
+            "position": [
+                1065,
+                510
+            ],
+            "angle": 0,
+            "hp": 90,
+            "size": [
+                10,
+                20
+            ]
+        }
+    ],
+    "targets": [
+        {
+            "position": [
+                760,
+                710
+            ],
+            "radius": 10,
+            "hp": 20,
+            "score": 1000
+        },
+        {
+            "position": [
+                795,
+                705
+            ],
+            "radius": 15,
+            "hp": 20,
+            "score": 1000
+        },
+        {
+            "position": [
+                940,
+                660
+            ],
+            "radius": 10,
+            "hp": 20,
+            "score": 1000
+        },
+        {
+            "position": [
+                1040,
+                615
+            ],
+            "radius": 15,
+            "hp": 20,
+            "score": 1000
+        },
+        {
+            "position": [
+                1040,
+                570
+            ],
+            "radius": 10,
+            "hp": 20,
+            "score": 1000
+        }
+    ]
 }
