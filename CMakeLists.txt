@@ -8,7 +8,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Dependencies
 include(FetchContent)
 
-find_package(SFML 3 COMPONENTS Graphics Window System REQUIRED)
+find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
 
 set(BOX2D_UNIT_TESTS OFF CACHE BOOL "Disable Box2D unit tests" FORCE)
 set(BOX2D_SAMPLES OFF CACHE BOOL "Disable Box2D samples" FORCE)
@@ -83,6 +83,7 @@ add_executable(${PROJECT_NAME}
     src/render/renderer.cpp
     src/render/texture_manager.cpp
     src/render/particles.cpp
+    src/render/sfx_player.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE src)
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -91,6 +92,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     SFML::Graphics
     SFML::Window
     SFML::System
+    SFML::Audio
 )
 target_compile_definitions(${PROJECT_NAME} PRIVATE
     ANGRY_MIPTS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"

@@ -629,6 +629,7 @@ void GameScene::process_events()
                 {
                     sf::Vector2f pos ( e.positionPx.x, e.positionPx.y );
                     const MaterialVfxProfile& profile = vfx_profile ( e.material );
+                    sfx_.play_destroyed ( e.material );
 
                     particles_.emit ( pos, profile.destroyBurstCount,
                                       profile.sparkColor, profile.shardSpeed,
@@ -656,6 +657,7 @@ void GameScene::process_events()
                     const sf::Color core = ability_core_color ( e.projectileType );
                     const sf::Color glow = ability_glow_color ( e.projectileType );
                     const AbilityVfxProfile cfg = ability_vfx_profile ( e.projectileType );
+                    sfx_.play_ability ( e.projectileType );
 
                     particles_.emit_ring ( pos, cfg.ringPrimaryCount, core,
                                            cfg.ringPrimarySpeed, cfg.ringPrimaryLifetime,

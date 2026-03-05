@@ -4,6 +4,7 @@
 #include "physics/physics_engine.hpp"
 #include "render/particles.hpp"
 #include "render/renderer.hpp"
+#include "render/sfx_player.hpp"
 #include "scene.hpp"
 #include "shared/level_data.hpp"
 #include "shared/thread_safe_queue.hpp"
@@ -20,6 +21,7 @@ class GameScene : public Scene
 {
 private:
     Renderer renderer_;
+    SfxPlayer sfx_;
     Slingshot slingshot_;
     ParticleSystem particles_;
     PhysicsEngine physics_;
