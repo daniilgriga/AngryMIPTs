@@ -147,11 +147,11 @@ Material parseMaterial( const std::string& value, const std::string& context )
 
 ProjectileType parseProjectileType( const std::string& value, const std::string& context )
 {
-    if ( value == "Striker" || value == "Standard" )
+    if ( value == "Striker" || value == "Standard")
     {
         return ProjectileType::Standard;
     }
-    if ( value == "Crusher" || value == "Heavy" )
+    if ( value == "Heavy" )
     {
         return ProjectileType::Heavy;
     }
@@ -477,8 +477,16 @@ std::vector<LevelMeta> LevelLoader::loadAllMeta( const std::string& levelsDir ) 
                 continue;
             }
 
-            const LevelData level = load( entry.path().string() );
-            allMeta.push_back( level.meta );
+            try
+            {
+                const LevelData level = load( entry.path().string() );
+                allMeta.push_back( level.meta );
+            }
+            catch ( const std::exception& error )
+            {
+                Logger::error( "Skipping invalid level '{}': {}",
+                               entry.path().string(), error.what() );
+            }
         }
 
         std::sort( allMeta.begin(), allMeta.end(),
