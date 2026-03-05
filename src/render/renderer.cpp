@@ -1,7 +1,10 @@
 #include "render/renderer.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <cmath>
+#include <string>
+#include <vector>
 
 namespace angry
 {
@@ -12,6 +15,32 @@ constexpr float kWorldW = 1920.f;
 constexpr float kWorldH = 1080.f;
 constexpr float kGroundY = 700.f;
 
+std::string projectile_label ( ProjectileType type )
+{
+    switch ( type )
+    {
+    case ProjectileType::Dasher:
+        return "Dasher";
+    case ProjectileType::Bomber:
+        return "Bomber";
+    case ProjectileType::Dropper:
+        return "Dropper";
+    case ProjectileType::Boomerang:
+        return "Boomerang";
+    case ProjectileType::Bubbler:
+        return "Bubbler";
+    case ProjectileType::Inflater:
+        return "Inflater";
+    case ProjectileType::Heavy:
+        return "Crusher";
+    case ProjectileType::Splitter:
+        return "Splitter";
+    case ProjectileType::Standard:
+    default:
+        return "Striker";
+    }
+}
+
 }  // namespace
 
 void draw_hill ( sf::RenderTarget& target, float cx, float base_y,
@@ -21,45 +50,172 @@ void draw_cloud ( sf::RenderTarget& target, float x, float y, float scale );
 void Renderer::draw_hud ( sf::RenderTarget& target, const WorldSnapshot& snapshot,
                           sf::Text& score_text )
 {
-    score_text.setPosition ( {20.f, 16.f} );
+    static sf::Clock hud_clock;
+    static sf::Clock hud_frame_clock;
+    static std::vector<ProjectileType> last_queue;
+    static float queue_slide = 0.f;
+
+    const float t = hud_clock.getElapsedTime().asSeconds();
+    const float dt = std::clamp ( hud_frame_clock.restart().asSeconds(), 0.f, 0.1f );
+    const float pulse = 0.5f + 0.5f * std::sin ( t * 4.2f );
+    const sf::Vector2f ws ( target.getSize() );
+
+    const int total = std::max ( 0, snapshot.totalShots );
+    const int remaining = std::clamp ( snapshot.shotsRemaining, 0, total );
+    const auto& queue = snapshot.projectileQueue;
+    const std::string current_name =
+        queue.empty() ? "--" : projectile_label ( queue.front() );
+    const std::string next_name =
+        queue.size() > 1 ? projectile_label ( queue[1] ) : "--";
+
+    const std::string charge_line = snapshot.slingshot.canShoot
+                                        ? "Loaded  " + current_name + "    Next  " + next_name
+                                        : "Current  " + current_name + "    Next  " + next_name;
+
+    if ( last_queue != queue )
+    {
+        queue_slide = 1.f;
+        last_queue = queue;
+    }
+    queue_slide = std::max ( 0.f, queue_slide - dt * 7.5f );
+    const float slide_px = 16.f * queue_slide * queue_slide;
+
+    // Top status card
+    const sf::Vector2f card_size ( 420.f, 100.f );
+    const sf::Vector2f card_pos ( 18.f, 16.f );
+
+    sf::RectangleShape card_shadow ( card_size );
+    card_shadow.setPosition ( card_pos + sf::Vector2f ( 6.f, 8.f ) );
+    card_shadow.setFillColor ( sf::Color ( 8, 12, 20, 110 ) );
+    target.draw ( card_shadow );
+
+    sf::RectangleShape card ( card_size );
+    card.setPosition ( card_pos );
+    card.setFillColor ( sf::Color ( 10, 18, 34, 166 ) );
+    card.setOutlineThickness ( 2.2f );
+    card.setOutlineColor ( sf::Color ( 170, 220, 255, 118 ) );
+    target.draw ( card );
+
+    sf::RectangleShape card_accent ( {card_size.x - 8.f, 5.f} );
+    card_accent.setPosition ( card_pos + sf::Vector2f ( 4.f, 4.f ) );
+    card_accent.setFillColor ( sf::Color ( 132, 204, 255, 140 ) );
+    target.draw ( card_accent );
+
+    score_text.setString ( "Score  " + std::to_string ( snapshot.score ) );
+    score_text.setCharacterSize ( 32 );
+    score_text.setStyle ( sf::Text::Bold );
+    score_text.setFillColor ( sf::Color ( 245, 250, 255 ) );
+    score_text.setPosition ( card_pos + sf::Vector2f ( 18.f, 14.f ) );
     target.draw ( score_text );
 
-    const float radius = 10.f;
-    const float spacing = 26.f;
-    const float base_x = 20.f + radius;
-    const float base_y = static_cast<float> ( target.getSize().y ) - 30.f;
+    sf::Text status_text = score_text;
+    status_text.setCharacterSize ( 16 );
+    status_text.setStyle ( sf::Text::Regular );
+    status_text.setFillColor ( sf::Color ( 216, 236, 255, 220 ) );
+    status_text.setString (
+        "Shots  " + std::to_string ( remaining ) + "/" + std::to_string ( total )
+        + "    " + charge_line );
+    status_text.setPosition ( card_pos + sf::Vector2f ( 20.f, 58.f ) );
+    target.draw ( status_text );
 
-    const int total = snapshot.totalShots;
-    const int remaining = snapshot.shotsRemaining;
+    sf::Text controls_text = status_text;
+    controls_text.setCharacterSize ( 14 );
+    controls_text.setFillColor ( sf::Color ( 190, 220, 244,
+                                             static_cast<uint8_t> ( 156.f + pulse * 90.f ) ) );
+    controls_text.setString ( "[Space] Ability   [Backspace] Menu" );
+    controls_text.setPosition ( card_pos + sf::Vector2f ( 20.f, 78.f ) );
+    target.draw ( controls_text );
+
+    // Top-right mini-sprite ammo queue
+    const float radius = 12.f;
+    const float spacing = 34.f;
+    const float rail_w =
+        42.f + static_cast<float> ( std::max ( 1, total ) - 1 ) * spacing + radius * 2.f;
+    const float rail_h = 52.f;
+    const sf::Vector2f rail_pos ( ws.x - rail_w - 18.f, 16.f );
+
+    sf::RectangleShape rail_shadow ( {rail_w, rail_h} );
+    rail_shadow.setPosition ( rail_pos + sf::Vector2f ( 4.f, 6.f ) );
+    rail_shadow.setFillColor ( sf::Color ( 8, 12, 20, 110 ) );
+    target.draw ( rail_shadow );
+
+    sf::RectangleShape rail ( {rail_w, rail_h} );
+    rail.setPosition ( rail_pos );
+    rail.setFillColor ( sf::Color ( 10, 16, 30, 160 ) );
+    rail.setOutlineThickness ( 2.f );
+    rail.setOutlineColor ( sf::Color ( 160, 208, 240, 110 ) );
+    target.draw ( rail );
+
+    sf::RectangleShape rail_accent ( {rail_w - 6.f, 4.f} );
+    rail_accent.setPosition ( rail_pos + sf::Vector2f ( 3.f, 3.f ) );
+    rail_accent.setFillColor ( sf::Color ( 132, 194, 245, 115 ) );
+    target.draw ( rail_accent );
+
+    const float base_x = rail_pos.x + 20.f + radius;
+    const float base_y = rail_pos.y + rail_h * 0.5f;
+    const int queue_count = static_cast<int> ( queue.size() );
+    const int consumed = std::max ( 0, total - queue_count );
 
     for ( int i = 0; i < total; ++i )
     {
-        sf::CircleShape icon ( radius );
-        icon.setOrigin ( {radius, radius} );
-        icon.setPosition ( {base_x + i * spacing, base_y} );
+        const float slot_x = base_x + i * spacing;
+        const int queue_idx = i - consumed;
+        const bool has_projectile = ( queue_idx >= 0 && queue_idx < queue_count );
+        const bool front_projectile = has_projectile && queue_idx == 0;
 
-        if ( i < remaining )
+        sf::CircleShape slot ( radius + 5.f );
+        slot.setOrigin ( {radius + 5.f, radius + 5.f} );
+        slot.setPosition ( {slot_x, base_y} );
+        slot.setFillColor ( sf::Color ( 255, 255, 255, 18 ) );
+        target.draw ( slot );
+
+        if ( front_projectile )
         {
-            if ( i == 0 && snapshot.slingshot.canShoot )
-            {
-                icon.setFillColor ( projectile_color ( snapshot.slingshot.nextProjectile ) );
-                icon.setOutlineColor ( projectile_outline ( snapshot.slingshot.nextProjectile ) );
-                icon.setOutlineThickness ( 2.f );
-            }
-            else
-            {
-                icon.setFillColor ( sf::Color ( 70, 65, 60 ) );
-                icon.setOutlineThickness ( 0.f );
-            }
-        }
-        else
-        {
-            icon.setFillColor ( sf::Color::Transparent );
-            icon.setOutlineColor ( sf::Color ( 100, 100, 100, 120 ) );
-            icon.setOutlineThickness ( 2.f );
+            const float glow_r = radius + 9.f + pulse * 3.f;
+            sf::CircleShape glow ( glow_r );
+            glow.setOrigin ( {glow_r, glow_r} );
+            glow.setPosition ( {slot_x + slide_px, base_y} );
+            glow.setFillColor (
+                sf::Color ( 255, 235, 164, static_cast<uint8_t> ( 58.f + pulse * 62.f ) ) );
+            target.draw ( glow );
         }
 
-        target.draw ( icon );
+        if ( has_projectile )
+        {
+            const ProjectileType type = queue[static_cast<size_t> ( queue_idx )];
+            const sf::Texture& tex = textures_.projectile ( type );
+            sf::Sprite icon ( tex );
+            const sf::Vector2u tex_size = tex.getSize();
+            const float diameter = front_projectile ? radius * 2.f + 3.f : radius * 2.f;
+            icon.setOrigin ( {static_cast<float> ( tex_size.x ) * 0.5f,
+                              static_cast<float> ( tex_size.y ) * 0.5f} );
+            icon.setScale ( {diameter / static_cast<float> ( tex_size.x ),
+                             diameter / static_cast<float> ( tex_size.y )} );
+            icon.setPosition ( {slot_x + slide_px, base_y} );
+            icon.setColor ( front_projectile ? sf::Color::White
+                                             : sf::Color ( 245, 245, 245, 208 ) );
+            target.draw ( icon );
+
+            if ( front_projectile )
+            {
+                sf::CircleShape ring ( radius + 1.5f );
+                ring.setOrigin ( {radius + 1.5f, radius + 1.5f} );
+                ring.setPosition ( {slot_x + slide_px, base_y} );
+                ring.setFillColor ( sf::Color::Transparent );
+                ring.setOutlineThickness ( 1.8f );
+                ring.setOutlineColor ( projectile_outline ( type ) );
+                target.draw ( ring );
+            }
+            continue;
+        }
+
+        sf::CircleShape spent ( radius );
+        spent.setOrigin ( {radius, radius} );
+        spent.setPosition ( {slot_x, base_y} );
+        spent.setFillColor ( sf::Color::Transparent );
+        spent.setOutlineColor ( sf::Color ( 124, 132, 148, 130 ) );
+        spent.setOutlineThickness ( 2.f );
+        target.draw ( spent );
     }
 }
 
@@ -317,6 +473,18 @@ sf::Color Renderer::projectile_color ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Dasher:
+        return sf::Color ( 246, 164, 74 );
+    case ProjectileType::Bomber:
+        return sf::Color ( 86, 90, 104 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 88, 188, 152 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 156, 196, 82 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 92, 194, 236 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 234, 120, 174 );
     case ProjectileType::Heavy:
         return sf::Color ( 80, 40, 120 );
     case ProjectileType::Splitter:
@@ -330,6 +498,18 @@ sf::Color Renderer::projectile_outline ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Dasher:
+        return sf::Color ( 255, 212, 142 );
+    case ProjectileType::Bomber:
+        return sf::Color ( 255, 180, 102 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 180, 246, 218 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 226, 248, 170 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 196, 242, 255 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 255, 212, 230 );
     case ProjectileType::Heavy:
         return sf::Color ( 160, 100, 220 );
     case ProjectileType::Splitter:

@@ -21,7 +21,7 @@
       "type": "Striker"
     },
     {
-      "type": "Crusher"
+      "type": "Heavy"
     },
     {
       "type": "Splitter"
@@ -30,7 +30,7 @@
       "type": "Striker"
     },
     {
-      "type": "Crusher"
+      "type": "Heavy"
     }
   ],
   "blocks": [

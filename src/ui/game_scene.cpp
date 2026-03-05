@@ -3,6 +3,8 @@
 #include "data/logger.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 
@@ -15,6 +17,8 @@ constexpr float kCameraWidth = 1280.f;
 constexpr float kCameraHeight = 720.f;
 constexpr float kWorldAspect = kCameraWidth / kCameraHeight;
 constexpr float kImpactFlashDecay = 3.0f;
+constexpr float kStrongImpactThreshold = 8.0f;
+constexpr float kStrongImpactMax = 22.0f;
 
 constexpr auto kPostFxFragmentShader = R"GLSL(
 uniform sampler2D texture;
@@ -103,6 +107,16 @@ void apply_letterbox ( sf::View& view, sf::Vector2u window_size )
     }
 }
 
+float strong_impact_factor ( float impulse )
+{
+    if ( impulse < kStrongImpactThreshold )
+        return 0.f;
+
+    return std::clamp (
+        ( impulse - kStrongImpactThreshold ) / ( kStrongImpactMax - kStrongImpactThreshold ),
+        0.f, 1.f );
+}
+
 std::string resolveProjectPath( const std::filesystem::path& relativePath )
 {
     if ( std::filesystem::exists( relativePath ) )
@@ -126,6 +140,18 @@ sf::Color projectile_trail_color ( ProjectileType type )
 {
     switch ( type )
     {
+    case ProjectileType::Dasher:
+        return sf::Color ( 255, 210, 132, 172 );
+    case ProjectileType::Bomber:
+        return sf::Color ( 255, 178, 102, 180 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 166, 236, 208, 170 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 220, 244, 160, 168 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 176, 234, 255, 175 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 255, 194, 224, 176 );
     case ProjectileType::Heavy:
         return sf::Color ( 186, 145, 240, 170 );
     case ProjectileType::Splitter:
@@ -133,6 +159,209 @@ sf::Color projectile_trail_color ( ProjectileType type )
     case ProjectileType::Standard:
     default:
         return sf::Color ( 255, 165, 136, 165 );
+    }
+}
+
+sf::Color ability_core_color ( ProjectileType type )
+{
+    switch ( type )
+    {
+    case ProjectileType::Bomber:
+        return sf::Color ( 255, 206, 132 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 214, 255, 236 );
+    case ProjectileType::Dasher:
+        return sf::Color ( 255, 220, 160 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 236, 255, 178 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 214, 248, 255 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 255, 220, 238 );
+    case ProjectileType::Heavy:
+        return sf::Color ( 196, 146, 255 );
+    case ProjectileType::Splitter:
+        return sf::Color ( 216, 246, 255 );
+    case ProjectileType::Standard:
+    default:
+        return sf::Color ( 255, 190, 150 );
+    }
+}
+
+sf::Color ability_glow_color ( ProjectileType type )
+{
+    switch ( type )
+    {
+    case ProjectileType::Bomber:
+        return sf::Color ( 255, 148, 76, 228 );
+    case ProjectileType::Dropper:
+        return sf::Color ( 78, 196, 162, 220 );
+    case ProjectileType::Dasher:
+        return sf::Color ( 248, 162, 70, 220 );
+    case ProjectileType::Boomerang:
+        return sf::Color ( 170, 214, 86, 220 );
+    case ProjectileType::Bubbler:
+        return sf::Color ( 98, 194, 240, 220 );
+    case ProjectileType::Inflater:
+        return sf::Color ( 232, 120, 176, 220 );
+    case ProjectileType::Heavy:
+        return sf::Color ( 112, 76, 196, 220 );
+    case ProjectileType::Splitter:
+        return sf::Color ( 126, 214, 255, 220 );
+    case ProjectileType::Standard:
+    default:
+        return sf::Color ( 255, 170, 120, 210 );
+    }
+}
+
+struct AbilityVfxProfile
+{
+    int ringPrimaryCount;
+    float ringPrimarySpeed;
+    float ringPrimaryLifetime;
+    float ringPrimarySize;
+    int ringSecondaryCount;
+    float ringSecondarySpeed;
+    float ringSecondaryLifetime;
+    float ringSecondarySize;
+    int burstCount;
+    float burstSpeed;
+    float burstLifetime;
+    float burstSize;
+    int shardCount;
+    float shardSpeed;
+    float shardLifetime;
+    float shardSize;
+    float shardAngularSpeed;
+    float shakeTime;
+    float shakeStrength;
+    float flashBoost;
+    bool burstUsesGlow;
+};
+
+AbilityVfxProfile ability_vfx_profile ( ProjectileType type )
+{
+    switch ( type )
+    {
+    case ProjectileType::Heavy:
+        return {
+            18,   // primary ring count
+            128.f, 0.24f, 4.6f,
+            0,    // secondary ring disabled
+            0.f, 0.f, 0.f,
+            24,   // burst
+            165.f, 0.42f, 4.9f,
+            10,   // shards
+            138.f, 0.52f, 5.4f, 380.f,
+            0.14f, 6.8f, 0.16f,
+            true  // burst is glow, shards are core
+        };
+    case ProjectileType::Bomber:
+        return {
+            28,
+            214.f, 0.26f, 5.4f,
+            16,
+            132.f, 0.34f, 4.3f,
+            40,
+            228.f, 0.46f, 5.4f,
+            18,
+            206.f, 0.72f, 5.8f, 760.f,
+            0.16f, 7.4f, 0.22f,
+            true
+        };
+    case ProjectileType::Dropper:
+        return {
+            16,
+            122.f, 0.20f, 3.8f,
+            10,
+            88.f, 0.28f, 3.0f,
+            24,
+            170.f, 0.38f, 4.1f,
+            14,
+            192.f, 0.50f, 4.2f, 560.f,
+            0.11f, 4.8f, 0.13f,
+            false
+        };
+    case ProjectileType::Dasher:
+        return {
+            14,
+            154.f, 0.16f, 3.2f,
+            0,
+            0.f, 0.f, 0.f,
+            14,
+            198.f, 0.24f, 3.4f,
+            8,
+            210.f, 0.30f, 3.1f, 520.f,
+            0.08f, 4.9f, 0.10f,
+            true
+        };
+    case ProjectileType::Boomerang:
+        return {
+            16,
+            132.f, 0.19f, 3.6f,
+            8,
+            88.f, 0.28f, 3.1f,
+            16,
+            165.f, 0.30f, 3.7f,
+            10,
+            174.f, 0.42f, 3.5f, 460.f,
+            0.09f, 4.5f, 0.12f,
+            false
+        };
+    case ProjectileType::Bubbler:
+        return {
+            18,
+            110.f, 0.24f, 3.9f,
+            14,
+            72.f, 0.34f, 3.3f,
+            20,
+            128.f, 0.36f, 3.8f,
+            12,
+            142.f, 0.50f, 3.6f, 420.f,
+            0.09f, 4.2f, 0.12f,
+            false
+        };
+    case ProjectileType::Inflater:
+        return {
+            20,
+            126.f, 0.26f, 4.3f,
+            10,
+            84.f, 0.34f, 3.7f,
+            22,
+            150.f, 0.40f, 4.2f,
+            10,
+            160.f, 0.54f, 3.8f, 500.f,
+            0.10f, 4.5f, 0.13f,
+            false
+        };
+    case ProjectileType::Splitter:
+        return {
+            20,
+            152.f, 0.20f, 4.1f,
+            12,
+            92.f, 0.30f, 3.3f,
+            20,
+            172.f, 0.34f, 3.9f,
+            14,
+            182.f, 0.40f, 3.7f, 520.f,
+            0.10f, 5.2f, 0.14f,
+            false  // burst is core, shards are glow
+        };
+    case ProjectileType::Standard:
+    default:
+        // Defensive fallback for future ability-enabled projectiles.
+        return {
+            14,
+            112.f, 0.22f, 3.5f,
+            0,
+            0.f, 0.f, 0.f,
+            16,
+            138.f, 0.30f, 3.5f,
+            8,
+            132.f, 0.34f, 3.2f, 320.f,
+            0.08f, 4.2f, 0.10f,
+            false
+        };
     }
 }
 
@@ -302,6 +531,11 @@ WorldSnapshot GameScene::make_mock_snapshot()
     snap.slingshot.maxPullPx = 120.f;
     snap.slingshot.canShoot = true;
     snap.slingshot.nextProjectile = ProjectileType::Standard;
+    snap.projectileQueue = {
+        ProjectileType::Standard,
+        ProjectileType::Heavy,
+        ProjectileType::Splitter,
+    };
 
     EntityId id = 1;
 
@@ -442,28 +676,38 @@ void GameScene::finish_level()
 void GameScene::process_events()
 {
     auto events = physics_.drainEvents();
+    int collision_vfx_budget = 18;
     for ( const auto& ev : events )
     {
         std::visit (
-            [this] ( const auto& e )
+            [this, &collision_vfx_budget] ( const auto& e )
             {
                 using T = std::decay_t<decltype ( e )>;
 
                 if constexpr ( std::is_same_v<T, CollisionEvent> )
                 {
+                    if ( collision_vfx_budget <= 0 )
+                        return;
+                    --collision_vfx_budget;
+
+                    const float impulse = std::clamp ( e.impulse, 0.f, 30.f );
+                    if ( impulse < 1.8f )
+                        return;
+
                     sf::Vector2f pos ( e.contactPointPx.x, e.contactPointPx.y );
                     const Material impactMaterial =
                         choose_impact_material ( snapshot_, e.aId, e.bId );
                     const MaterialVfxProfile& profile = vfx_profile ( impactMaterial );
 
                     const int count = std::clamp (
-                        static_cast<int> ( e.impulse * profile.impulseToCount ),
-                        profile.minHitCount, profile.maxHitCount );
+                        static_cast<int> ( impulse * profile.impulseToCount * 0.60f ),
+                        std::max ( 2, profile.minHitCount / 2 ), profile.maxHitCount );
                     const float speed =
-                        std::clamp ( e.impulse * profile.hitSpeedScale, 36.f, 240.f );
+                        std::clamp ( impulse * profile.hitSpeedScale, 36.f, 240.f );
 
                     particles_.emit ( pos, count, profile.sparkColor, speed, 0.38f, 3.2f );
-                    particles_.emit ( pos, count / 2, profile.dustColor, speed * 0.65f,
+                    particles_.emit ( pos, std::max ( 1, count / 3 ),
+                                      profile.dustColor, speed * 0.65f,
                                       0.52f, 4.8f );
 
                     if ( profile.ringOnHit )
@@ -473,12 +717,14 @@ void GameScene::process_events()
                                                0.30f, 2.8f );
                     }
 
-                    particles_.emit_shards (
-                        pos, std::max ( 2, count / 2 ), profile.shardColor,
-                        std::clamp ( profile.shardSpeed * ( e.impulse / 10.f ), 45.f, 220.f ),
-                        0.48f, profile.shardSize, 320.f );
+                    if ( impulse > 3.5f )
+                    {
+                        particles_.emit_shards (
+                            pos, std::max ( 1, count / 3 ), profile.shardColor,
+                            std::clamp ( profile.shardSpeed * ( impulse / 10.f ), 45.f, 220.f ),
+                            0.48f, profile.shardSize, 320.f );
+                    }
 
-                    const float impulse = std::clamp ( e.impulse, 0.f, 30.f );
                     if ( impulse > 1.2f )
                     {
                         shake_time_ =
@@ -490,31 +736,176 @@ void GameScene::process_events()
                             std::max ( impact_flash_, std::clamp (
                                 impulse * profile.hitFlashBoost, 0.03f, 0.30f ) );
                     }
+
+                    const float strongImpact = strong_impact_factor ( impulse );
+                    if ( strongImpact > 0.f )
+                    {
+                        shake_time_ = std::max ( shake_time_, 0.069f + strongImpact * 0.014f );
+                        shake_strength_ = std::max (
+                            shake_strength_, std::clamp ( impulse * 0.45f, 3.f, 11.f ) );
+                        impact_flash_ = std::max (
+                            impact_flash_, std::clamp ( 0.05f + impulse * 0.008f, 0.05f, 0.22f ) );
+                    }
                 }
                 else if constexpr ( std::is_same_v<T, DestroyedEvent> )
                 {
                     sf::Vector2f pos ( e.positionPx.x, e.positionPx.y );
                     const MaterialVfxProfile& profile = vfx_profile ( e.material );
+                    sfx_.play_destroyed ( e.material );
 
-                    particles_.emit ( pos, profile.destroyBurstCount,
+                    int burstCount = profile.destroyBurstCount;
+                    int dustCount = profile.destroyBurstCount / 2;
+                    int shardCount = static_cast<int> (
+                        std::round ( static_cast<float> ( profile.shardCount ) * 1.35f ) );
+                    float shardSpeed = profile.shardSpeed;
+                    float shardLifetime = 0.88f;
+                    float shardSize = profile.shardSize * 1.35f;
+                    float shardAngular = 420.f;
+                    int ringCount = 14;
+                    float ringSpeed = profile.shardSpeed * 0.62f;
+                    float ringLifetime = 0.34f;
+                    float ringSize = profile.shardSize * 0.92f;
+
+                    switch ( e.material )
+                    {
+                    case Material::Wood:
+                        shardCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.shardCount ) * 1.9f ) );
+                        shardSpeed *= 1.04f;
+                        shardLifetime = 0.96f;
+                        shardSize *= 1.25f;
+                        shardAngular = 280.f;
+                        dustCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.destroyBurstCount ) * 0.70f ) );
+                        break;
+                    case Material::Stone:
+                        shardCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.shardCount ) * 1.25f ) );
+                        shardSpeed *= 0.80f;
+                        shardLifetime = 1.02f;
+                        shardSize *= 1.56f;
+                        shardAngular = 240.f;
+                        dustCount = profile.destroyBurstCount;
+                        break;
+                    case Material::Glass:
+                        burstCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.destroyBurstCount ) * 1.15f ) );
+                        dustCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.destroyBurstCount ) * 0.55f ) );
+                        shardCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.shardCount ) * 2.2f ) );
+                        shardSpeed *= 1.45f;
+                        shardLifetime = 0.92f;
+                        shardSize *= 0.92f;
+                        shardAngular = 640.f;
+                        ringCount = 18;
+                        ringSpeed *= 1.10f;
+                        ringLifetime = 0.30f;
+                        ringSize *= 0.84f;
+                        break;
+                    case Material::Ice:
+                        burstCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.destroyBurstCount ) * 0.95f ) );
+                        dustCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.destroyBurstCount ) * 0.75f ) );
+                        shardCount = static_cast<int> (
+                            std::round ( static_cast<float> ( profile.shardCount ) * 1.8f ) );
+                        shardSpeed *= 1.25f;
+                        shardLifetime = 0.98f;
+                        shardSize *= 1.05f;
+                        shardAngular = 560.f;
+                        ringCount = 16;
+                        ringSpeed *= 0.92f;
+                        ringLifetime = 0.36f;
+                        ringSize *= 1.05f;
+                        break;
+                    default:
+                        break;
+                    }
+
+                    burstCount = std::max ( 4, burstCount );
+                    dustCount = std::max ( 2, dustCount );
+                    shardCount = std::max ( 3, shardCount );
+
+                    particles_.emit ( pos, burstCount,
                                       profile.sparkColor, profile.shardSpeed,
                                       0.58f, profile.shardSize );
-                    particles_.emit ( pos, profile.destroyBurstCount / 2,
+                    particles_.emit ( pos, dustCount,
                                       profile.dustColor, profile.shardSpeed * 0.55f,
                                       0.76f, profile.shardSize * 1.3f );
-                    particles_.emit_shards ( pos, profile.shardCount,
-                                             profile.shardColor, profile.shardSpeed,
-                                             0.78f, profile.shardSize * 1.1f, 420.f );
+                    particles_.emit_shards ( pos, shardCount, profile.shardColor, shardSpeed,
+                                             shardLifetime, shardSize, shardAngular );
+
+                    if ( e.material == Material::Ice )
+                    {
+                        particles_.emit ( pos, 10, sf::Color ( 228, 246, 255, 175 ),
+                                          profile.shardSpeed * 0.54f, 0.64f,
+                                          profile.shardSize * 1.25f );
+                    }
 
                     if ( profile.ringOnDestroy )
                     {
-                        particles_.emit_ring ( pos, 14, profile.sparkColor,
-                                               profile.shardSpeed * 0.62f,
-                                               0.34f, profile.shardSize * 0.92f );
+                        particles_.emit_ring ( pos, ringCount, profile.sparkColor,
+                                               ringSpeed, ringLifetime, ringSize );
                     }
 
                     impact_flash_ =
                         std::max ( impact_flash_, profile.destroyFlashBoost );
+                }
+                else if constexpr ( std::is_same_v<T, AbilityActivatedEvent> )
+                {
+                    const sf::Vector2f pos ( e.positionPx.x, e.positionPx.y );
+                    const sf::Color core = ability_core_color ( e.projectileType );
+                    const sf::Color glow = ability_glow_color ( e.projectileType );
+                    const AbilityVfxProfile cfg = ability_vfx_profile ( e.projectileType );
+                    sfx_.play_ability ( e.projectileType );
+
+                    particles_.emit_ring ( pos, cfg.ringPrimaryCount, core,
+                                           cfg.ringPrimarySpeed, cfg.ringPrimaryLifetime,
+                                           cfg.ringPrimarySize );
+                    if ( cfg.ringSecondaryCount > 0 )
+                    {
+                        particles_.emit_ring ( pos, cfg.ringSecondaryCount, glow,
+                                               cfg.ringSecondarySpeed,
+                                               cfg.ringSecondaryLifetime,
+                                               cfg.ringSecondarySize );
+                    }
+
+                    const sf::Color burstColor = cfg.burstUsesGlow ? glow : core;
+                    const sf::Color shardColor = cfg.burstUsesGlow ? core : glow;
+                    particles_.emit ( pos, cfg.burstCount, burstColor, cfg.burstSpeed,
+                                      cfg.burstLifetime, cfg.burstSize );
+                    particles_.emit_shards ( pos, cfg.shardCount, shardColor,
+                                             cfg.shardSpeed, cfg.shardLifetime,
+                                             cfg.shardSize, cfg.shardAngularSpeed );
+
+                    if ( e.projectileType == ProjectileType::Bomber )
+                    {
+                        particles_.emit_ring ( pos, 22, glow, 176.f, 0.34f, 6.2f );
+                        particles_.emit ( pos, 16, sf::Color ( 255, 212, 166, 188 ),
+                                          148.f, 0.56f, 5.2f );
+                    }
+                    else if ( e.projectileType == ProjectileType::Dropper )
+                    {
+                        particles_.emit_ring ( pos + sf::Vector2f ( 0.f, 14.f ), 12, glow,
+                                               116.f, 0.26f, 3.6f );
+                        particles_.emit ( pos + sf::Vector2f ( 0.f, 16.f ), 12, core,
+                                          106.f, 0.42f, 3.9f );
+                    }
+                    else if ( e.projectileType == ProjectileType::Boomerang )
+                    {
+                        particles_.emit_ring ( pos, 14, glow, 164.f, 0.24f, 3.9f );
+                        particles_.emit_shards ( pos, 10, core, 188.f, 0.36f, 3.1f, 860.f );
+                    }
+                    else if ( e.projectileType == ProjectileType::Dasher )
+                    {
+                        particles_.emit_ring ( pos, 10, glow, 208.f, 0.18f, 3.0f );
+                        particles_.emit ( pos, 12, core, 194.f, 0.22f, 3.4f );
+                    }
+
+                    shake_time_ = std::max ( shake_time_, cfg.shakeTime );
+                    shake_strength_ = std::max ( shake_strength_, cfg.shakeStrength );
+                    impact_flash_ = std::max ( impact_flash_, cfg.flashBoost );
                 }
             },
             ev );
@@ -555,15 +946,16 @@ void GameScene::update()
 {
     const float dt = std::clamp ( frame_clock_.restart().asSeconds(), 0.0f, 1.0f / 30.0f );
 
-    particles_.update ( dt );
-
     if ( snapshot_.status != LevelStatus::Running )
     {
+        particles_.update ( dt );
         end_delay_ += dt;
         if ( end_delay_ >= 1.5f && pending_scene_ == SceneId::None )
             finish_level();
         return;
     }
+
+    particles_.update ( dt );
 
     physics_.processCommands ( command_queue_ );
     physics_.step ( dt );
