@@ -32,7 +32,7 @@ std::string projectile_label ( ProjectileType type )
     case ProjectileType::Inflater:
         return "Inflater";
     case ProjectileType::Heavy:
-        return "Crusher";
+        return "Heavy";
     case ProjectileType::Splitter:
         return "Splitter";
     case ProjectileType::Standard:
