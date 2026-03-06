@@ -47,7 +47,6 @@ private:
     float end_delay_ = 0.f;
     int level_id_ = -1;
     std::string scores_path_;
-    LevelMeta current_meta_;
     sf::View game_view_;
     sf::RenderWindow* window_ptr_ = nullptr;
     sf::RenderTexture world_pass_;

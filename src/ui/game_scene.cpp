@@ -624,7 +624,6 @@ void GameScene::load_level ( int level_id, const std::string& scores_path )
         const std::string path = resolveProjectPath (
             "levels/level_0" + std::to_string ( level_id ) + ".json" );
         const LevelData level = level_loader_.load ( path );
-        current_meta_ = level.meta;
         physics_.registerLevel ( level );
         physics_.loadLevel ( level );
         snapshot_ = physics_.getSnapshot();
@@ -646,17 +645,7 @@ void GameScene::finish_level()
 {
     const bool won = ( snapshot_.status == LevelStatus::Win );
     const int score = snapshot_.score;
-
-    int stars = 0;
-    if ( won && current_meta_.id > 0 )
-    {
-        if ( score >= current_meta_.star3Threshold )
-            stars = 3;
-        else if ( score >= current_meta_.star2Threshold )
-            stars = 2;
-        else if ( score >= current_meta_.star1Threshold )
-            stars = 1;
-    }
+    const int stars = std::clamp ( snapshot_.stars, 0, 3 );
 
     last_result_ = { won, score, stars };
 
