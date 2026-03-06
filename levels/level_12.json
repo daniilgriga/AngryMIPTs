@@ -1,7 +1,7 @@
 {
   "meta": {
     "id": 12,
-    "name": "test_level_crusher",
+    "name": "test_level_heavy",
     "totalShots": 3,
     "starThresholds": [
       1000,
@@ -11,20 +11,20 @@
   },
   "slingshot": {
     "position": [
-      525,
-      590
+      290,
+      570
     ],
     "maxPull": 180
   },
   "projectiles": [
     {
-      "type": "Crusher"
+      "type": "Heavy"
     },
     {
-      "type": "Crusher"
+      "type": "Heavy"
     },
     {
-      "type": "Crusher"
+      "type": "Heavy"
     }
   ],
   "blocks": [
@@ -32,8 +32,8 @@
       "shape": "rect",
       "material": "Wood",
       "position": [
-        940,
-        675
+        720,
+        765
       ],
       "angle": 0,
       "hp": 50,
@@ -46,8 +46,8 @@
       "shape": "rect",
       "material": "Stone",
       "position": [
-        490,
-        655
+        270,
+        745
       ],
       "angle": 0,
       "hp": 1000000,
@@ -60,8 +60,8 @@
       "shape": "rect",
       "material": "Wood",
       "position": [
-        1020,
-        675
+        800,
+        765
       ],
       "angle": 0,
       "hp": 50,
@@ -74,8 +74,8 @@
       "shape": "rect",
       "material": "Wood",
       "position": [
-        980,
-        620
+        760,
+        710
       ],
       "angle": 0,
       "hp": 50,
@@ -88,8 +88,8 @@
       "shape": "rect",
       "material": "Stone",
       "position": [
-        1100,
-        675
+        880,
+        765
       ],
       "angle": 0,
       "hp": 90,
@@ -102,8 +102,8 @@
       "shape": "rect",
       "material": "Stone",
       "position": [
-        1180,
-        675
+        960,
+        765
       ],
       "angle": 0,
       "hp": 90,
@@ -116,8 +116,8 @@
       "shape": "rect",
       "material": "Stone",
       "position": [
-        1140,
-        620
+        920,
+        710
       ],
       "angle": 0,
       "hp": 90,
@@ -130,8 +130,8 @@
       "shape": "rect",
       "material": "Glass",
       "position": [
-        1260,
-        675
+        1040,
+        765
       ],
       "angle": 0,
       "hp": 35,
@@ -144,8 +144,8 @@
       "shape": "rect",
       "material": "Glass",
       "position": [
-        1340,
-        675
+        1120,
+        765
       ],
       "angle": 0,
       "hp": 35,
@@ -158,8 +158,8 @@
       "shape": "rect",
       "material": "Glass",
       "position": [
-        1300,
-        620
+        1080,
+        710
       ],
       "angle": 0,
       "hp": 35,
@@ -172,8 +172,8 @@
   "targets": [
     {
       "position": [
-        1140,
-        700
+        920,
+        790
       ],
       "radius": 20,
       "hp": 20,
@@ -181,8 +181,8 @@
     },
     {
       "position": [
-        980,
-        700
+        760,
+        790
       ],
       "radius": 20,
       "hp": 20,
@@ -190,8 +190,8 @@
     },
     {
       "position": [
-        1300,
-        700
+        1080,
+        790
       ],
       "radius": 20,
       "hp": 20,
