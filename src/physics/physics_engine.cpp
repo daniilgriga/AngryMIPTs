@@ -1436,6 +1436,13 @@ void PhysicsEngine::destroyBody(b2BodyId bodyId)
 
 void PhysicsEngine::updateLevelStatus()
 {
+    if (currentLevel_.meta.star1Threshold > 0
+        && scoreSystem_.score() >= currentLevel_.meta.star1Threshold)
+    {
+        snapshot_.status = LevelStatus::Win;
+        return;
+    }
+
     bool hasAliveTargets = false;
 
     for (const BodyBinding& binding : bodies_)
