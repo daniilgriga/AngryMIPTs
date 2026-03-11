@@ -19,7 +19,7 @@
 namespace angry
 {
 
-// Stage 1 skeleton: lifecycle + API surface, no worker thread yet.
+// Thread wrapper over PhysicsEngine with fixed-step worker and snapshot buffering.
 class PhysicsThread
 {
 public:
@@ -32,6 +32,9 @@ public:
 
     void registerLevel(const LevelData& level);
     void loadLevel(const LevelData& level);
+    void loadLevelById(int levelId);
+    void restartLevel(int levelId);
+    void setPaused(bool paused);
     void pushCommand(const Command& cmd);
 
     // Temporary adapter for single-thread integration while worker loop is not introduced yet.

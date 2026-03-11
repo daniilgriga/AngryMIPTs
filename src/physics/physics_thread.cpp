@@ -1,9 +1,22 @@
 #include "physics_thread.hpp"
 
 #include <algorithm>
+#include <optional>
 
 namespace angry
 {
+namespace
+{
+
+template <typename T>
+void clearQueue(ThreadSafeQueue<T>& queue)
+{
+    while (queue.try_pop().has_value())
+    {
+    }
+}
+
+}  // namespace
 
 PhysicsThread::~PhysicsThread()
 {
@@ -41,6 +54,9 @@ void PhysicsThread::stop()
     {
         worker_.join();
     }
+
+    clearQueue(commandQueue_);
+    clearQueue(eventQueue_);
 }
 
 bool PhysicsThread::isRunning() const
@@ -58,8 +74,32 @@ void PhysicsThread::registerLevel(const LevelData& level)
 void PhysicsThread::loadLevel(const LevelData& level)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    engine_.loadLevel(level);
-    publishSnapshotLocked();
+    engine_.registerLevel(level);
+
+    if (running_)
+    {
+        commandQueue_.push(LoadLevelCmd{level.meta.id});
+    }
+    else
+    {
+        engine_.loadLevel(level);
+        publishSnapshotLocked();
+    }
+}
+
+void PhysicsThread::loadLevelById(int levelId)
+{
+    commandQueue_.push(LoadLevelCmd{levelId});
+}
+
+void PhysicsThread::restartLevel(int levelId)
+{
+    commandQueue_.push(RestartCmd{levelId});
+}
+
+void PhysicsThread::setPaused(bool paused)
+{
+    commandQueue_.push(PauseCmd{paused});
 }
 
 void PhysicsThread::pushCommand(const Command& cmd)
