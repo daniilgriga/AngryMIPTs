@@ -66,48 +66,67 @@ std::optional<Command> Slingshot::handle_input ( const sf::Event& event,
     return std::nullopt;
 }
 
-void Slingshot::render ( sf::RenderTarget& target, const SlingshotState& sling )
+void Slingshot::render ( sf::RenderTarget& target, const SlingshotState& sling,
+                         const sf::Texture& projectile_tex )
 {
-    if ( !dragging_ )
+    if ( !sling.canShoot )
         return;
 
     sf::Vector2f base ( sling.basePx.x, sling.basePx.y - 60.f );
-
-    sf::Vector2f left_prong ( base.x - 8.f, base.y - 15.f );
+    sf::Vector2f left_prong  ( base.x - 8.f, base.y - 15.f );
     sf::Vector2f right_prong ( base.x + 8.f, base.y - 15.f );
+
+    const sf::Vector2f ball_pos = dragging_ ? drag_current_ : base;
+    const float        ball_r   = 14.f;
 
     sf::Color band_color ( 90, 50, 20 );
 
-    sf::Vertex band_left[] = {
-        {left_prong, band_color},
-        {drag_current_, band_color},
-    };
-    target.draw ( band_left, 2, sf::PrimitiveType::Lines );
-
-    sf::Vertex band_right[] = {
-        {right_prong, band_color},
-        {drag_current_, band_color},
-    };
-    target.draw ( band_right, 2, sf::PrimitiveType::Lines );
-
-    sf::CircleShape ball ( 8.f );
-    ball.setOrigin ( {8.f, 8.f} );
-    ball.setPosition ( drag_current_ );
-    ball.setFillColor ( sf::Color ( 50, 50, 50 ) );
-    target.draw ( ball );
-
-    // Trajectory preview
-    sf::Vector2f pull = base - drag_current_;
-    sf::Vector2f launch_vel = pull * 4.5f;
-    auto points = calc_trajectory ( launch_vel, base, 60 );
-
-    for ( const auto& pt : points )
+    if ( dragging_ )
     {
-        sf::CircleShape dot ( 2.f );
-        dot.setOrigin ( {2.f, 2.f} );
-        dot.setPosition ( pt );
-        dot.setFillColor ( sf::Color ( 255, 255, 255, 120 ) );
-        target.draw ( dot );
+        sf::Vertex band_left[]  = { {left_prong,  band_color}, {ball_pos, band_color} };
+        sf::Vertex band_right[] = { {right_prong, band_color}, {ball_pos, band_color} };
+        target.draw ( band_left,  2, sf::PrimitiveType::Lines );
+        target.draw ( band_right, 2, sf::PrimitiveType::Lines );
+    }
+    else
+    {
+        // Relaxed bands hang slightly from prongs to resting ball position
+        sf::Vector2f sag ( 0.f, 6.f );
+        sf::Vertex band_left[]  = { {left_prong,       band_color},
+                                    {left_prong  + sag, band_color},
+                                    {ball_pos,          band_color} };
+        sf::Vertex band_right[] = { {right_prong,      band_color},
+                                    {right_prong + sag, band_color},
+                                    {ball_pos,          band_color} };
+        target.draw ( band_left,  3, sf::PrimitiveType::LineStrip );
+        target.draw ( band_right, 3, sf::PrimitiveType::LineStrip );
+    }
+
+    // Bird sprite
+    const auto  ts  = projectile_tex.getSize();
+    const float scale = ball_r * 2.f / static_cast<float> ( std::max ( ts.x, ts.y ) );
+    sf::Sprite  bird ( projectile_tex );
+    bird.setOrigin ( { static_cast<float> ( ts.x ) * 0.5f,
+                       static_cast<float> ( ts.y ) * 0.5f } );
+    bird.setPosition ( ball_pos );
+    bird.setScale ( { scale, scale } );
+    target.draw ( bird );
+
+    if ( dragging_ )
+    {
+        // Trajectory preview
+        sf::Vector2f pull       = base - drag_current_;
+        sf::Vector2f launch_vel = pull * 4.5f;
+        auto         points     = calc_trajectory ( launch_vel, base, 60 );
+
+        for ( const auto& pt : points )
+        {
+            sf::CircleShape dot ( 2.f );
+            dot.setOrigin ( {2.f, 2.f} );
+            dot.setPosition ( pt );
+            dot.setFillColor ( sf::Color ( 255, 255, 255, 120 ) );
+            target.draw ( dot );
+        }
     }
 }
 

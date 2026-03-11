@@ -1119,7 +1119,8 @@ void GameScene::render ( sf::RenderWindow& window )
     world_pass_.clear ( sf::Color ( 6, 8, 14 ) );
     world_pass_.setView ( world_view );
     renderer_.draw_snapshot ( world_pass_, snapshot_ );
-    slingshot_.render ( world_pass_, snapshot_.slingshot );
+    slingshot_.render ( world_pass_, snapshot_.slingshot,
+                        renderer_.projectile_texture ( snapshot_.slingshot.nextProjectile ) );
 
     for ( const auto& ghost : dropper_payload_ghosts_ )
     {

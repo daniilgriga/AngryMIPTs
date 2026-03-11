@@ -13,6 +13,7 @@ public:
     void draw_snapshot ( sf::RenderTarget& target, const WorldSnapshot& snapshot );
     void draw_hud ( sf::RenderTarget& target, const WorldSnapshot& snapshot,
                     sf::Text& score_text );
+    const sf::Texture& projectile_texture ( ProjectileType type );
 
 private:
     TextureManager textures_;

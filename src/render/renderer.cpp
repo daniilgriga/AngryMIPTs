@@ -618,6 +618,11 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
     }
 }
 
+const sf::Texture& Renderer::projectile_texture ( ProjectileType type )
+{
+    return textures_.projectile ( type );
+}
+
 void Renderer::draw_slingshot ( sf::RenderTarget& target, const SlingshotState& sling )
 {
     const sf::Texture& wood = textures_.slingshot_wood();
