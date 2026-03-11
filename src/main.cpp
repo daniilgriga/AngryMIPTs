@@ -92,6 +92,12 @@ int main()
                     windowedSize = resized->size;
             }
 
+            if ( event->is<sf::Event::FocusGained>() )
+            {
+                if ( auto* game = scenes.get_scene<angry::GameScene> ( angry::SceneId::Game ) )
+                    game->notify_window_recreated();
+            }
+
             if ( const auto* key = event->getIf<sf::Event::KeyPressed>() )
             {
                 const bool toggleFullscreen =
@@ -104,6 +110,8 @@ int main()
                         windowedSize = window.getSize();
                     }
                     recreateWindow ( !isFullscreen );
+                    if ( auto* game = scenes.get_scene<angry::GameScene> ( angry::SceneId::Game ) )
+                        game->notify_window_recreated();
                     continue;
                 }
 
@@ -112,6 +120,8 @@ int main()
                     if ( isFullscreen )
                     {
                         recreateWindow ( false );
+                        if ( auto* game = scenes.get_scene<angry::GameScene> ( angry::SceneId::Game ) )
+                            game->notify_window_recreated();
                         continue;
                     }
                     window.close();

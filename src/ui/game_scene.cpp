@@ -614,6 +614,53 @@ GameScene::GameScene ( const sf::Font& font )
     }
 }
 
+void GameScene::notify_window_recreated()
+{
+    render_targets_dirty_ = true;
+    world_pass_ = sf::RenderTexture();
+    bloom_extract_pass_ = sf::RenderTexture();
+    bloom_ping_pass_ = sf::RenderTexture();
+    bloom_pong_pass_ = sf::RenderTexture();
+}
+
+void GameScene::rebuild_render_targets ( sf::Vector2u size )
+{
+    if ( size.x == 0 || size.y == 0 )
+        return;
+
+    world_pass_ = sf::RenderTexture();
+    if ( !world_pass_.resize ( size ) )
+    {
+        Logger::error ( "GameScene: failed to resize world render target" );
+        return;
+    }
+    world_pass_.setSmooth ( true );
+
+    if ( bloom_ready_ )
+    {
+        bloom_extract_pass_ = sf::RenderTexture();
+        bloom_ping_pass_ = sf::RenderTexture();
+        bloom_pong_pass_ = sf::RenderTexture();
+
+        const bool bloom_ok = bloom_extract_pass_.resize ( size )
+                              && bloom_ping_pass_.resize ( size )
+                              && bloom_pong_pass_.resize ( size );
+        if ( !bloom_ok )
+        {
+            Logger::error ( "GameScene: failed to resize bloom render targets, bloom disabled" );
+            bloom_ready_ = false;
+        }
+        else
+        {
+            bloom_extract_pass_.setSmooth ( true );
+            bloom_ping_pass_.setSmooth ( true );
+            bloom_pong_pass_.setSmooth ( true );
+        }
+    }
+
+    render_targets_dirty_ = false;
+}
+
 void GameScene::load_level ( int level_id, const std::string& scores_path )
 {
     level_id_ = level_id;
@@ -621,6 +668,7 @@ void GameScene::load_level ( int level_id, const std::string& scores_path )
     pending_scene_ = SceneId::None;
     end_delay_ = 0.f;
     dropper_payload_ghosts_.clear();
+    render_targets_dirty_ = true;
 
     try
     {
@@ -948,6 +996,11 @@ void GameScene::process_events()
 
 SceneId GameScene::handle_input ( const sf::Event& event )
 {
+    if ( event.getIf<sf::Event::Resized>() || event.getIf<sf::Event::FocusGained>() )
+    {
+        render_targets_dirty_ = true;
+    }
+
     if ( pending_scene_ != SceneId::None )
     {
         SceneId next = pending_scene_;
@@ -1078,34 +1131,21 @@ void GameScene::update()
 
 void GameScene::render ( sf::RenderWindow& window )
 {
+    const sf::Vector2u window_size = window.getSize();
+    if ( window_size.x == 0 || window_size.y == 0 )
+        return;
+
     window_ptr_ = &window;
-    apply_letterbox ( game_view_, window.getSize() );
+    apply_letterbox ( game_view_, window_size );
 
-    if ( world_pass_.getSize() != window.getSize() )
+    if ( render_targets_dirty_ || world_pass_.getSize() != window_size )
     {
-        if ( !world_pass_.resize ( window.getSize() ) )
-        {
-            Logger::error ( "GameScene: failed to resize world render target" );
-        }
-        world_pass_.setSmooth ( true );
+        rebuild_render_targets ( window_size );
+    }
 
-        if ( bloom_ready_ )
-        {
-            const bool bloom_ok = bloom_extract_pass_.resize ( window.getSize() )
-                                  && bloom_ping_pass_.resize ( window.getSize() )
-                                  && bloom_pong_pass_.resize ( window.getSize() );
-            if ( !bloom_ok )
-            {
-                Logger::error ( "GameScene: failed to resize bloom render targets, bloom disabled" );
-                bloom_ready_ = false;
-            }
-            else
-            {
-                bloom_extract_pass_.setSmooth ( true );
-                bloom_ping_pass_.setSmooth ( true );
-                bloom_pong_pass_.setSmooth ( true );
-            }
-        }
+    if ( world_pass_.getSize().x == 0 || world_pass_.getSize().y == 0 )
+    {
+        return;
     }
 
     // World rendering in game coordinates

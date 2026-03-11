@@ -65,10 +65,12 @@ private:
     std::mt19937 rng_ {std::random_device {} ()};
     std::uniform_real_distribution<float> shake_dist_ {-1.f, 1.f};
     std::vector<DropperPayloadGhost> dropper_payload_ghosts_;
+    bool render_targets_dirty_ = true;
 
     static WorldSnapshot make_mock_snapshot();
     void finish_level();
     void process_events();
+    void rebuild_render_targets ( sf::Vector2u size );
 
 public:
     explicit GameScene ( const sf::Font& font );
@@ -77,6 +79,7 @@ public:
 
     void load_level ( int level_id, const std::string& scores_path = "" );
     void retry();
+    void notify_window_recreated();
 
     SceneId handle_input ( const sf::Event& event ) override;
     void update() override;
