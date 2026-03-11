@@ -13,7 +13,7 @@ namespace
 
 constexpr float kWorldW = 1920.f;
 constexpr float kWorldH = 1080.f;
-constexpr float kGroundY = 700.f;
+constexpr float kGroundY = 600.f;  // must match kGroundTopYpx in physics_engine.cpp
 constexpr float kPi = 3.14159265358979323846f;
 
 sf::Vector2f rotate_local ( sf::Vector2f v, float angle_deg )
@@ -254,23 +254,105 @@ void Renderer::draw_background ( sf::RenderTarget& target )
     draw_cloud ( target, std::fmod ( 1200.f + t * 4.1f, kWorldW + 300.f ) - 150.f, 150.f, 1.0f );
     draw_cloud ( target, std::fmod ( 1600.f + t * 7.4f, kWorldW + 360.f ) - 180.f, 100.f, 0.6f );
 
-    // Grass
-    sf::RectangleShape grass ( {kWorldW, kWorldH - kGroundY} );
-    grass.setPosition ( {0.f, kGroundY} );
-    grass.setFillColor ( sf::Color ( 90, 170, 65 ) );
-    target.draw ( grass );
+    // --- Ground ---
+    // Earth body: layered gradient (grass → topsoil → dark soil)
+    {
+        const sf::Color c_grass  ( 88,  168,  62 );
+        const sf::Color c_top    ( 112, 78,   44 );
+        const sf::Color c_soil   ( 72,  50,   28 );
+        const sf::Color c_deep   ( 48,  34,   18 );
 
-    // Grass highlight strip
-    sf::RectangleShape grass_top ( {kWorldW, 8.f} );
-    grass_top.setPosition ( {0.f, kGroundY} );
-    grass_top.setFillColor ( sf::Color ( 110, 190, 75 ) );
-    target.draw ( grass_top );
+        // Layer 0: grass top band (kGroundY .. kGroundY+28)
+        sf::Vertex g0[] = {
+            {{0.f,      kGroundY},       c_grass},
+            {{kWorldW,  kGroundY},       c_grass},
+            {{kWorldW,  kGroundY + 28.f}, c_top},
+            {{0.f,      kGroundY + 28.f}, c_top},
+        };
+        target.draw ( g0, 4, sf::PrimitiveType::TriangleFan );
 
-    // Darker earth at very bottom
-    sf::RectangleShape earth ( {kWorldW, 30.f} );
-    earth.setPosition ( {0.f, kWorldH - 30.f} );
-    earth.setFillColor ( sf::Color ( 70, 120, 45 ) );
-    target.draw ( earth );
+        // Layer 1: topsoil (kGroundY+28 .. kGroundY+120)
+        sf::Vertex g1[] = {
+            {{0.f,      kGroundY + 28.f},  c_top},
+            {{kWorldW,  kGroundY + 28.f},  c_top},
+            {{kWorldW,  kGroundY + 120.f}, c_soil},
+            {{0.f,      kGroundY + 120.f}, c_soil},
+        };
+        target.draw ( g1, 4, sf::PrimitiveType::TriangleFan );
+
+        // Layer 2: deep soil (kGroundY+120 .. bottom)
+        sf::Vertex g2[] = {
+            {{0.f,      kGroundY + 120.f}, c_soil},
+            {{kWorldW,  kGroundY + 120.f}, c_soil},
+            {{kWorldW,  kWorldH},          c_deep},
+            {{0.f,      kWorldH},          c_deep},
+        };
+        target.draw ( g2, 4, sf::PrimitiveType::TriangleFan );
+    }
+
+    // Wavy grass edge: a thin strip with sinusoidal top profile
+    {
+        const int   segs     = 96;
+        const float seg_w    = kWorldW / static_cast<float> ( segs );
+        const float wave_amp = 4.f;
+        const float strip_h  = 10.f;
+        const sf::Color c_bright ( 128, 200, 72 );
+        const sf::Color c_mid    ( 98,  175,  58 );
+
+        sf::VertexArray wave ( sf::PrimitiveType::TriangleStrip,
+                               static_cast<std::size_t> ( ( segs + 1 ) * 2 ) );
+        for ( int i = 0; i <= segs; ++i )
+        {
+            const float x   = static_cast<float> ( i ) * seg_w;
+            const float top = kGroundY - wave_amp
+                              * ( 0.5f + 0.5f * std::sin ( x * 0.031f )
+                                       + 0.25f * std::sin ( x * 0.073f + 1.1f ) );
+            wave[static_cast<std::size_t> ( i * 2 )]     = { {x, top},           c_bright };
+            wave[static_cast<std::size_t> ( i * 2 + 1 )] = { {x, top + strip_h}, c_mid    };
+        }
+        target.draw ( wave );
+    }
+
+    // Grass blades: short vertical strokes procedurally scattered
+    {
+        const int   blade_count = 180;
+        const float base_y      = kGroundY;
+        sf::VertexArray blades ( sf::PrimitiveType::Lines,
+                                 static_cast<std::size_t> ( blade_count * 2 ) );
+        for ( int i = 0; i < blade_count; ++i )
+        {
+            // deterministic pseudo-random position & height from index
+            const uint32_t h1 = static_cast<uint32_t> ( i ) * 2654435761u;
+            const uint32_t h2 = h1 ^ ( h1 >> 16u );
+            const float x     = static_cast<float> ( h1 & 0xFFFFu ) / 65535.f * kWorldW;
+            const float lean  = ( static_cast<float> ( h2 & 0xFFu ) / 255.f - 0.5f ) * 6.f;
+            const float ht    = 8.f + static_cast<float> ( h2 >> 24u ) / 255.f * 10.f;
+
+            const float wave_offset = -( 0.5f + 0.5f * std::sin ( x * 0.031f )
+                                                + 0.25f * std::sin ( x * 0.073f + 1.1f ) ) * 4.f;
+
+            const uint8_t g = static_cast<uint8_t> ( 160 + ( h2 & 0x1Fu ) );
+            const sf::Color c_base ( 60,  g,  40, 200 );
+            const sf::Color c_tip  ( 110, static_cast<uint8_t>(g+30u > 255u ? 255u : g+30u), 60, 140 );
+
+            blades[static_cast<std::size_t> ( i * 2 )]     = { {x,        base_y + wave_offset},         c_base };
+            blades[static_cast<std::size_t> ( i * 2 + 1 )] = { {x + lean, base_y + wave_offset - ht},    c_tip  };
+        }
+        target.draw ( blades );
+    }
+
+    // Soil texture: horizontal scan lines suggesting layered earth
+    {
+        const int lines = 12;
+        for ( int i = 0; i < lines; ++i )
+        {
+            const float y      = kGroundY + 30.f + static_cast<float> ( i ) * 8.f;
+            const uint8_t a    = static_cast<uint8_t> ( 18 + i * 2 );
+            const sf::Color lc ( 255, 220, 150, a );
+            sf::Vertex ln[] = { {{0.f, y}, lc}, {{kWorldW, y}, lc} };
+            target.draw ( ln, 2, sf::PrimitiveType::Lines );
+        }
+    }
 }
 
 void draw_hill ( sf::RenderTarget& target, float cx, float base_y,
@@ -313,10 +395,21 @@ void draw_cloud ( sf::RenderTarget& target, float x, float y, float scale )
     blob ( 30.f, -25.f, 30.f );
 }
 
+// Darkens a color for static/indestructible blocks to signal they are immovable.
+static sf::Color static_tint ( sf::Color c )
+{
+    return sf::Color (
+        static_cast<uint8_t> ( c.r * 0.55f ),
+        static_cast<uint8_t> ( c.g * 0.55f ),
+        static_cast<uint8_t> ( c.b * 0.55f ),
+        c.a );
+}
+
 void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj )
 {
-    const bool uses_hp = ( obj.kind == ObjectSnapshot::Kind::Block
-                           || obj.kind == ObjectSnapshot::Kind::Target );
+    const bool is_block = ( obj.kind == ObjectSnapshot::Kind::Block );
+    const bool uses_hp = is_block || ( obj.kind == ObjectSnapshot::Kind::Target );
+    const bool is_triangle = is_block && ( obj.shape == BlockShape::Triangle );
 
     float draw_w = obj.sizePx.x;
     float draw_h = obj.sizePx.y;
@@ -328,19 +421,52 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
     if ( draw_w <= 0.f || draw_h <= 0.f )
         return;
 
+    // --- Triangle blocks ---
+    if ( is_triangle )
+    {
+        // Physics triangle: bottom-left, bottom-right, top-center
+        const float hw = obj.sizePx.x * 0.5f;
+        const float hh = obj.sizePx.y * 0.5f;
+
+        const sf::Texture& tex = textures_.block ( obj.material );
+        const sf::Vector2u ts = tex.getSize();
+
+        sf::ConvexShape tri ( 3 );
+        tri.setPoint ( 0, {-hw,  hh} );
+        tri.setPoint ( 1, { hw,  hh} );
+        tri.setPoint ( 2, {  0, -hh} );
+        tri.setOrigin ( {0.f, 0.f} );
+        tri.setPosition ( {obj.positionPx.x, obj.positionPx.y} );
+        tri.setRotation ( sf::degrees ( obj.angleDeg ) );
+        tri.setTexture ( &tex );
+        // Map texture corners to triangle vertices
+        tri.setTextureRect ( sf::IntRect ( {0, 0},
+            {static_cast<int> ( ts.x ), static_cast<int> ( ts.y )} ) );
+
+        sf::Color tint = obj.isStatic ? static_tint ( sf::Color::White )
+                                      : tint_by_hp ( sf::Color::White, obj.hpNormalized );
+        tri.setFillColor ( tint );
+
+        if ( obj.isStatic )
+        {
+            tri.setOutlineThickness ( 2.f );
+            tri.setOutlineColor ( sf::Color ( 20, 20, 20, 180 ) );
+        }
+
+        target.draw ( tri );
+        if ( !obj.isStatic )
+            draw_damage_overlay ( target, obj );
+        return;
+    }
+
+    // --- Textured blocks, targets, projectiles ---
     const sf::Texture* texture = nullptr;
-    if ( obj.kind == ObjectSnapshot::Kind::Block )
-    {
+    if ( is_block )
         texture = &textures_.block ( obj.material );
-    }
     else if ( obj.kind == ObjectSnapshot::Kind::Target )
-    {
         texture = &textures_.target();
-    }
     else if ( obj.kind == ObjectSnapshot::Kind::Projectile )
-    {
         texture = &textures_.projectile ( obj.projectileType );
-    }
 
     if ( texture )
     {
@@ -353,11 +479,37 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
         sprite.setScale ( {draw_w / tex_size_f.x, draw_h / tex_size_f.y} );
         sprite.setPosition ( {obj.positionPx.x, obj.positionPx.y} );
         sprite.setRotation ( sf::degrees ( obj.angleDeg ) );
-        sprite.setColor ( uses_hp ? tint_by_hp ( sf::Color::White, obj.hpNormalized )
-                                  : sf::Color::White );
+
+        sf::Color tint = sf::Color::White;
+        if ( is_block && obj.isStatic )
+            tint = static_tint ( sf::Color::White );
+        else if ( uses_hp )
+            tint = tint_by_hp ( sf::Color::White, obj.hpNormalized );
+        sprite.setColor ( tint );
+
         target.draw ( sprite );
-        if ( obj.kind == ObjectSnapshot::Kind::Block )
-            draw_damage_overlay ( target, obj );
+
+        if ( is_block )
+        {
+            if ( obj.isStatic )
+            {
+                // Dark outline to visually mark static/indestructible platforms
+                const float ow = draw_w + 4.f;
+                const float oh = draw_h + 4.f;
+                sf::RectangleShape outline ( {ow, oh} );
+                outline.setOrigin ( {ow * 0.5f, oh * 0.5f} );
+                outline.setPosition ( {obj.positionPx.x, obj.positionPx.y} );
+                outline.setRotation ( sf::degrees ( obj.angleDeg ) );
+                outline.setFillColor ( sf::Color::Transparent );
+                outline.setOutlineThickness ( 2.f );
+                outline.setOutlineColor ( sf::Color ( 20, 20, 20, 160 ) );
+                target.draw ( outline );
+            }
+            else
+            {
+                draw_damage_overlay ( target, obj );
+            }
+        }
 
         if ( obj.kind == ObjectSnapshot::Kind::Projectile
              && obj.projectileType == ProjectileType::Bomber
@@ -407,6 +559,7 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
         return;
     }
 
+    // --- Fallback: primitive shapes (no texture available) ---
     if ( obj.radiusPx > 0.f )
     {
         sf::CircleShape shape ( obj.radiusPx );
@@ -421,21 +574,17 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
             shape.setOutlineColor ( projectile_outline ( obj.projectileType ) );
             shape.setOutlineThickness ( 2.f );
         }
-        else if ( obj.kind == ObjectSnapshot::Kind::Block )
-        {
-            color = material_color ( obj.material );
-        }
         else
-        {
-            color = kind_color ( obj.kind );
-        }
+            color = is_block ? material_color ( obj.material ) : kind_color ( obj.kind );
 
-        if ( uses_hp )
+        if ( is_block && obj.isStatic )
+            color = static_tint ( color );
+        else if ( uses_hp )
             color = tint_by_hp ( color, obj.hpNormalized );
         shape.setFillColor ( color );
 
         target.draw ( shape );
-        if ( obj.kind == ObjectSnapshot::Kind::Block )
+        if ( is_block && !obj.isStatic )
             draw_damage_overlay ( target, obj );
     }
     else
@@ -456,12 +605,15 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
         }
         else
             color = material_color ( obj.material );
-        if ( uses_hp )
+
+        if ( is_block && obj.isStatic )
+            color = static_tint ( color );
+        else if ( uses_hp )
             color = tint_by_hp ( color, obj.hpNormalized );
         shape.setFillColor ( color );
 
         target.draw ( shape );
-        if ( obj.kind == ObjectSnapshot::Kind::Block )
+        if ( is_block && !obj.isStatic )
             draw_damage_overlay ( target, obj );
     }
 }
