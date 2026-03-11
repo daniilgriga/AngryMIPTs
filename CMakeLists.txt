@@ -10,6 +10,13 @@ include(FetchContent)
 
 find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
 
+FetchContent_Declare(
+    cpr
+    GIT_REPOSITORY https://github.com/libcpr/cpr.git
+    GIT_TAG 1.10.4
+)
+FetchContent_MakeAvailable(cpr)
+
 set(BOX2D_UNIT_TESTS OFF CACHE BOOL "Disable Box2D unit tests" FORCE)
 set(BOX2D_SAMPLES OFF CACHE BOOL "Disable Box2D samples" FORCE)
 set(BOX2D_BENCHMARKS OFF CACHE BOOL "Disable Box2D benchmarks" FORCE)
@@ -57,10 +64,13 @@ add_library(angry_data
     src/data/level_loader.cpp
     src/data/logger.cpp
     src/data/score_saver.cpp
+    src/data/OnlineScoreClient.cpp
 )
 target_include_directories(angry_data PUBLIC src)
 if(TARGET nlohmann_json::nlohmann_json)
-    target_link_libraries(angry_data PUBLIC nlohmann_json::nlohmann_json)
+    target_link_libraries(angry_data PUBLIC nlohmann_json::nlohmann_json cpr::cpr)
+else()
+    target_link_libraries(angry_data PUBLIC cpr::cpr)
 endif()
 
 # Physics library (A)
