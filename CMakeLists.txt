@@ -67,6 +67,7 @@ endif()
 add_library(angry_physics
     src/core/score_system.cpp
     src/physics/physics_engine.cpp
+    src/physics/physics_thread.cpp
 )
 target_include_directories(angry_physics PUBLIC src)
 target_link_libraries(angry_physics PUBLIC ${ANGRY_BOX2D_TARGET})
