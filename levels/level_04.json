@@ -12,7 +12,7 @@
   "slingshot": {
     "position": [
       295,
-      700
+      600
     ],
     "maxPull": 200
   },
@@ -39,7 +39,7 @@
       "material": "Wood",
       "position": [
         650,
-        649
+        549
       ],
       "angle": 0,
       "hp": 50,
@@ -53,7 +53,7 @@
       "material": "Wood",
       "position": [
         730,
-        650
+        550
       ],
       "angle": 0,
       "hp": 50,
@@ -67,7 +67,7 @@
       "material": "Glass",
       "position": [
         690,
-        590
+        490
       ],
       "angle": 90,
       "hp": 35,
@@ -81,7 +81,7 @@
       "material": "Wood",
       "position": [
         830,
-        650
+        550
       ],
       "angle": 0,
       "hp": 50,
@@ -95,7 +95,7 @@
       "material": "Wood",
       "position": [
         910,
-        650
+        550
       ],
       "angle": 0,
       "hp": 50,
@@ -109,7 +109,7 @@
       "material": "Glass",
       "position": [
         870,
-        590
+        490
       ],
       "angle": 90,
       "hp": 35,
@@ -123,7 +123,7 @@
       "material": "Wood",
       "position": [
         690,
-        530
+        430
       ],
       "angle": 0,
       "hp": 50,
@@ -137,7 +137,7 @@
       "material": "Wood",
       "position": [
         870,
-        530
+        430
       ],
       "angle": 0,
       "hp": 50,
@@ -151,7 +151,7 @@
       "material": "Stone",
       "position": [
         780,
-        570
+        470
       ],
       "angle": 90,
       "hp": 90,
@@ -165,7 +165,7 @@
       "material": "Stone",
       "position": [
         780,
-        520
+        420
       ],
       "angle": 0,
       "hp": 90,
@@ -179,7 +179,7 @@
       "material": "Glass",
       "position": [
         780,
-        470
+        370
       ],
       "angle": 90,
       "hp": 35,
@@ -193,7 +193,7 @@
     {
       "position": [
         820,
-        540
+        440
       ],
       "radius": 20,
       "hp": 20,
@@ -202,7 +202,7 @@
     {
       "position": [
         740,
-        540
+        440
       ],
       "radius": 20,
       "hp": 20,

@@ -12,7 +12,7 @@
   "slingshot": {
     "position": [
       290,
-      570
+      470
     ],
     "maxPull": 180
   },
@@ -33,7 +33,7 @@
       "material": "Wood",
       "position": [
         720,
-        765
+        555
       ],
       "angle": 0,
       "hp": 50,
@@ -47,7 +47,7 @@
       "material": "Stone",
       "position": [
         270,
-        745
+        535
       ],
       "angle": 0,
       "hp": 1000000,
@@ -61,7 +61,7 @@
       "material": "Wood",
       "position": [
         800,
-        765
+        555
       ],
       "angle": 0,
       "hp": 50,
@@ -75,7 +75,7 @@
       "material": "Wood",
       "position": [
         760,
-        710
+        500
       ],
       "angle": 0,
       "hp": 50,
@@ -89,7 +89,7 @@
       "material": "Stone",
       "position": [
         880,
-        765
+        555
       ],
       "angle": 0,
       "hp": 90,
@@ -103,7 +103,7 @@
       "material": "Stone",
       "position": [
         960,
-        765
+        555
       ],
       "angle": 0,
       "hp": 90,
@@ -117,7 +117,7 @@
       "material": "Stone",
       "position": [
         920,
-        710
+        500
       ],
       "angle": 0,
       "hp": 90,
@@ -131,7 +131,7 @@
       "material": "Glass",
       "position": [
         1040,
-        765
+        555
       ],
       "angle": 0,
       "hp": 35,
@@ -145,7 +145,7 @@
       "material": "Glass",
       "position": [
         1120,
-        765
+        555
       ],
       "angle": 0,
       "hp": 35,
@@ -159,7 +159,7 @@
       "material": "Glass",
       "position": [
         1080,
-        710
+        500
       ],
       "angle": 0,
       "hp": 35,
@@ -173,7 +173,7 @@
     {
       "position": [
         920,
-        790
+        580
       ],
       "radius": 20,
       "hp": 20,
@@ -182,7 +182,7 @@
     {
       "position": [
         760,
-        790
+        580
       ],
       "radius": 20,
       "hp": 20,
@@ -191,7 +191,7 @@
     {
       "position": [
         1080,
-        790
+        580
       ],
       "radius": 20,
       "hp": 20,
