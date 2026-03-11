@@ -540,29 +540,32 @@ WorldSnapshot GameScene::make_mock_snapshot()
 
     EntityId id = 1;
 
-    snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
-                              {640.f, 700.f}, 0.f, {1280.f, 40.f}, 0.f,
-                              Material::Stone, ProjectileType::Standard, 1.f, true} );
+    auto make_block = [] ( EntityId eid, Vec2 pos, Vec2 size, Material mat,
+                           float hp = 1.f, bool is_static = false ) -> ObjectSnapshot
+    {
+        ObjectSnapshot o{};
+        o.id = eid; o.kind = ObjectSnapshot::Kind::Block;
+        o.positionPx = pos; o.sizePx = size;
+        o.material = mat; o.shape = BlockShape::Rect;
+        o.isStatic = is_static; o.hpNormalized = hp; o.isActive = true;
+        return o;
+    };
 
-    snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
-                              {800.f, 580.f}, 0.f, {20.f, 100.f}, 0.f,
-                              Material::Wood, ProjectileType::Standard, 1.f, true} );
+    snap.objects.push_back ( make_block ( id++, {640.f, 700.f}, {1280.f, 40.f}, Material::Stone ) );
+    snap.objects.push_back ( make_block ( id++, {800.f, 580.f}, {20.f, 100.f}, Material::Wood ) );
+    snap.objects.push_back ( make_block ( id++, {900.f, 580.f}, {20.f, 100.f}, Material::Wood ) );
+    snap.objects.push_back ( make_block ( id++, {850.f, 520.f}, {140.f, 20.f}, Material::Wood, 0.8f ) );
+    snap.objects.push_back ( make_block ( id++, {850.f, 500.f}, {60.f, 20.f}, Material::Glass ) );
 
-    snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
-                              {900.f, 580.f}, 0.f, {20.f, 100.f}, 0.f,
-                              Material::Wood, ProjectileType::Standard, 1.f, true} );
-
-    snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
-                              {850.f, 520.f}, 0.f, {140.f, 20.f}, 0.f,
-                              Material::Wood, ProjectileType::Standard, 0.8f, true} );
-
-    snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Block,
-                              {850.f, 500.f}, 0.f, {60.f, 20.f}, 0.f,
-                              Material::Glass, ProjectileType::Standard, 1.f, true} );
-
-    snap.objects.push_back ( {id++, ObjectSnapshot::Kind::Target,
-                              {850.f, 560.f}, 0.f, {0.f, 0.f}, 15.f,
-                              Material::Wood, ProjectileType::Standard, 1.f, true} );
+    ObjectSnapshot target{};
+    target.id = id++;
+    target.kind = ObjectSnapshot::Kind::Target;
+    target.positionPx = {850.f, 560.f};
+    target.radiusPx = 15.f;
+    target.material = Material::Wood;
+    target.hpNormalized = 1.f;
+    target.isActive = true;
+    snap.objects.push_back ( target );
 
     return snap;
 }

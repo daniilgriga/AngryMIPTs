@@ -1356,6 +1356,7 @@ void PhysicsEngine::createBlockBody(const BlockData& block)
     binding.sizePx = block.sizePx;
     binding.radiusPx = block.radiusPx;
     binding.material = block.material;
+    binding.shape = block.shape;
     binding.hp = std::max(1.0f, block.hp);
     binding.maxHp = binding.hp;
     binding.isStatic = block.isStatic;
@@ -1549,6 +1550,8 @@ void PhysicsEngine::refreshSnapshot()
         object.radiusPx = binding.radiusPx;
         object.material = binding.material;
         object.projectileType = binding.projectileType;
+        object.shape = binding.shape;
+        object.isStatic = binding.isStatic;
         object.hpNormalized = clampValue(binding.hp / std::max(1.0f, binding.maxHp), 0.0f, 1.0f);
 
         if (B2_IS_NON_NULL(binding.bodyId) && b2Body_IsValid(binding.bodyId))

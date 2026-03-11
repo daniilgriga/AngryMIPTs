@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 
+#include "level_data.hpp"
 #include "types.hpp"
 
 namespace angry
@@ -22,6 +23,8 @@ struct ObjectSnapshot
     float radiusPx;  // for circles (0 if rectangle)
     Material material;
     ProjectileType projectileType = ProjectileType::Standard;
+    BlockShape shape = BlockShape::Rect;  // block shape for renderer (Rect/Circle/Triangle)
+    bool isStatic = false;               // static blocks rendered as solid ground elements
     float hpNormalized;  // 0.0 .. 1.0
     bool isActive;
 };
