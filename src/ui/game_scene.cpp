@@ -726,20 +726,24 @@ void GameScene::finish_level()
     const int stars = std::clamp ( snapshot_.stars, 0, 3 );
 
     last_result_ = { won, score, stars, {} };
-    leaderboard_applied_ = !won;
+    leaderboard_applied_ = true;
     pending_result_token_ = 0;
 
-    if ( won && level_id_ > 0 )
+    if ( level_id_ > 0 )
     {
+        leaderboard_applied_ = false;
         if ( !scores_path_.empty() )
         {
-            try
+            if ( won )
             {
-                score_saver_.saveScore ( scores_path_, level_id_, score, stars );
-            }
-            catch ( const std::exception& e )
-            {
-                Logger::error ( "GameScene: failed to save score: {}", e.what() );
+                try
+                {
+                    score_saver_.saveScore ( scores_path_, level_id_, score, stars );
+                }
+                catch ( const std::exception& e )
+                {
+                    Logger::error ( "GameScene: failed to save score: {}", e.what() );
+                }
             }
         }
 
@@ -750,28 +754,31 @@ void GameScene::finish_level()
         const int level_id = level_id_;
         const int score_value = score;
         const int stars_value = stars;
+        const bool won_value = won;
         OnlineScoreClient client = online_score_client_;
 
         std::thread (
             [async_state, token, client = std::move ( client ),
              player_name = std::move ( player_name ),
-             level_id, score_value, stars_value]() mutable
+             level_id, score_value, stars_value, won_value]() mutable
             {
                 std::vector<LeaderboardEntry> leaderboard;
 
                 try
                 {
-                    const bool submit_ok = client.submitScore (
-                        player_name, level_id, score_value, stars_value );
-                    if ( submit_ok )
+                    if ( won_value )
                     {
-                        leaderboard = client.fetchLeaderboard ( level_id );
+                        const bool submit_ok = client.submitScore (
+                            player_name, level_id, score_value, stars_value );
+                        if ( !submit_ok )
+                        {
+                            Logger::info (
+                                "GameScene: backend submit failed, trying to load leaderboard anyway" );
+                        }
                     }
-                    else
-                    {
-                        Logger::info (
-                            "GameScene: backend submit failed, keeping local result only" );
-                    }
+
+                    // Always try to load leaderboard, including lose flow.
+                    leaderboard = client.fetchLeaderboard ( level_id );
                 }
                 catch ( const std::exception& e )
                 {

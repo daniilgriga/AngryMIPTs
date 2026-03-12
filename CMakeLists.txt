@@ -140,3 +140,15 @@ target_link_libraries(angry_ui_render_tests PRIVATE
     GTest::gtest_main
 )
 gtest_discover_tests(angry_ui_render_tests)
+
+# Data online client tests (no UI dependency)
+add_executable(angry_online_score_client_tests
+    tests/online_score_client_tests.cpp
+)
+target_include_directories(angry_online_score_client_tests PRIVATE src)
+target_link_libraries(angry_online_score_client_tests PRIVATE
+    angry_data
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(angry_online_score_client_tests)

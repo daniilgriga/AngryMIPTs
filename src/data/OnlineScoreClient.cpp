@@ -4,6 +4,9 @@
 
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
+#include <chrono>
+#include <cstdlib>
+#include <thread>
 
 namespace angry
 {
@@ -14,12 +17,99 @@ namespace
 {
 
 constexpr int kBackendTimeoutMs = 3000;
+constexpr int kBackendMaxAttempts = 3;
+constexpr int kBackendRetryDelayMs = 220;
+constexpr const char* kDefaultBackendUrl = "http://84.201.138.107:8080";
+constexpr const char* kBackendUrlEnvVar = "ANGRY_BACKEND_URL";
+
+std::string resolveBackendUrl( std::string baseUrl )
+{
+    if ( !baseUrl.empty() )
+    {
+        return baseUrl;
+    }
+
+    const char* envUrl = std::getenv( kBackendUrlEnvVar );
+    if ( envUrl != nullptr && envUrl[0] != '\0' )
+    {
+        return std::string( envUrl );
+    }
+
+    return std::string( kDefaultBackendUrl );
+}
+
+bool isHttpOk( long statusCode )
+{
+    return statusCode >= 200 && statusCode < 300;
+}
+
+bool shouldRetryRequest( const cpr::Response& response )
+{
+    if ( response.error.code != cpr::ErrorCode::OK )
+    {
+        return true;
+    }
+
+    // Retry only on transient HTTP failures.
+    return response.status_code == 408
+           || response.status_code == 429
+           || ( response.status_code >= 500 && response.status_code <= 599 );
+}
+
+template <typename RequestFn>
+cpr::Response performRequestWithRetry( const char* opName, RequestFn&& requestFn )
+{
+    cpr::Response response;
+
+    for ( int attempt = 1; attempt <= kBackendMaxAttempts; ++attempt )
+    {
+        response = requestFn();
+
+        const bool ok = ( response.error.code == cpr::ErrorCode::OK )
+                        && isHttpOk( response.status_code );
+        if ( ok )
+        {
+            return response;
+        }
+
+        const bool canRetry = attempt < kBackendMaxAttempts && shouldRetryRequest( response );
+        if ( response.error.code != cpr::ErrorCode::OK )
+        {
+            Logger::error(
+                "OnlineScoreClient::{} attempt {}/{} failed: network error={} ({})",
+                opName,
+                attempt,
+                kBackendMaxAttempts,
+                static_cast<int>( response.error.code ),
+                response.error.message );
+        }
+        else
+        {
+            Logger::error(
+                "OnlineScoreClient::{} attempt {}/{} failed: http status={}",
+                opName,
+                attempt,
+                kBackendMaxAttempts,
+                response.status_code );
+        }
+
+        if ( !canRetry )
+        {
+            return response;
+        }
+
+        std::this_thread::sleep_for( std::chrono::milliseconds( kBackendRetryDelayMs ) );
+    }
+
+    return response;
+}
 
 }  // namespace
 
 OnlineScoreClient::OnlineScoreClient(std::string baseUrl)
-    : baseUrl_(std::move(baseUrl))
+    : baseUrl_( resolveBackendUrl( std::move( baseUrl ) ) )
 {
+    Logger::info( "OnlineScoreClient backend URL: {}", baseUrl_ );
 }
 
 bool OnlineScoreClient::submitScore(
@@ -28,7 +118,7 @@ bool OnlineScoreClient::submitScore(
     int score,
     int stars)
 {
-    Logger::info("Submitting score to backend...");
+    Logger::info( "Submitting score to backend..." );
 
     const json body = {
         {"playerName", playerName},
@@ -37,67 +127,107 @@ bool OnlineScoreClient::submitScore(
         {"stars", stars},
     };
 
-    const cpr::Response response = cpr::Post(
-        cpr::Url{baseUrl_ + "/scores"},
-        cpr::Header{{"Content-Type", "application/json"}},
-        cpr::Body{body.dump()},
-        cpr::Timeout{kBackendTimeoutMs});
+    const cpr::Response response = performRequestWithRetry(
+        "submitScore",
+        [&]()
+        {
+            return cpr::Post(
+                cpr::Url{baseUrl_ + "/scores"},
+                cpr::Header{{"Content-Type", "application/json"}},
+                cpr::Body{body.dump()},
+                cpr::Timeout{kBackendTimeoutMs});
+        });
 
-    if (response.error.code != cpr::ErrorCode::OK)
+    if ( response.error.code != cpr::ErrorCode::OK )
     {
-        Logger::error("Backend unavailable.");
+        Logger::error( "OnlineScoreClient::submitScore failed after retries." );
         return false;
     }
 
-    const bool ok = response.status_code >= 200 && response.status_code < 300;
-    if (!ok)
+    if ( !isHttpOk( response.status_code ) )
     {
-        Logger::error("Backend unavailable.");
+        Logger::error(
+            "OnlineScoreClient::submitScore failed: final http status={}",
+            response.status_code );
+        return false;
     }
 
-    return ok;
+    Logger::info( "OnlineScoreClient::submitScore success." );
+    return true;
+}
+
+LeaderboardFetchResult OnlineScoreClient::fetchLeaderboardWithStatus(int levelId)
+{
+    LeaderboardFetchResult result;
+
+    const cpr::Response response = performRequestWithRetry(
+        "fetchLeaderboard",
+        [&]()
+        {
+            return cpr::Get(
+                cpr::Url{baseUrl_ + "/leaderboard"},
+                cpr::Parameters{{"levelId", std::to_string(levelId)}},
+                cpr::Timeout{kBackendTimeoutMs});
+        });
+
+    if ( response.error.code != cpr::ErrorCode::OK )
+    {
+        Logger::error( "OnlineScoreClient::fetchLeaderboard failed after retries." );
+        result.status = LeaderboardFetchStatus::Unavailable;
+        return result;
+    }
+
+    if ( !isHttpOk( response.status_code ) )
+    {
+        Logger::error(
+            "OnlineScoreClient::fetchLeaderboard failed: final http status={}",
+            response.status_code );
+        result.status = LeaderboardFetchStatus::Unavailable;
+        return result;
+    }
+
+    const json data = json::parse( response.text, nullptr, false );
+    if ( data.is_discarded() )
+    {
+        Logger::error( "OnlineScoreClient::fetchLeaderboard failed: invalid JSON payload." );
+        result.status = LeaderboardFetchStatus::InvalidResponse;
+        return result;
+    }
+
+    if ( !data.is_array() )
+    {
+        Logger::error( "OnlineScoreClient::fetchLeaderboard failed: expected JSON array." );
+        result.status = LeaderboardFetchStatus::InvalidResponse;
+        return result;
+    }
+
+    result.entries.reserve( data.size() );
+    for ( const json& item : data )
+    {
+        if ( !item.is_object() )
+        {
+            Logger::info(
+                "OnlineScoreClient::fetchLeaderboard: skipped non-object leaderboard item." );
+            continue;
+        }
+
+        LeaderboardEntry entry;
+        entry.playerName = item.value( "playerName", "" );
+        entry.score = item.value( "score", 0 );
+        entry.stars = item.value( "stars", 0 );
+        result.entries.push_back( std::move( entry ) );
+    }
+
+    result.status = result.entries.empty()
+                        ? LeaderboardFetchStatus::Empty
+                        : LeaderboardFetchStatus::Ok;
+    Logger::info( "Leaderboard loaded: {} entries.", result.entries.size() );
+    return result;
 }
 
 std::vector<LeaderboardEntry> OnlineScoreClient::fetchLeaderboard(int levelId)
 {
-    std::vector<LeaderboardEntry> entries;
-
-    const cpr::Response response = cpr::Get(
-        cpr::Url{baseUrl_ + "/leaderboard"},
-        cpr::Parameters{{"levelId", std::to_string(levelId)}},
-        cpr::Timeout{kBackendTimeoutMs});
-
-    if (response.error.code != cpr::ErrorCode::OK)
-    {
-        Logger::error("Backend unavailable.");
-        return entries;
-    }
-
-    if (response.status_code < 200 || response.status_code >= 300)
-    {
-        Logger::error("Backend unavailable.");
-        return entries;
-    }
-
-    const json data = json::parse(response.text, nullptr, false);
-    if (!data.is_array())
-    {
-        Logger::error("Backend unavailable.");
-        return entries;
-    }
-
-    entries.reserve(data.size());
-    for (const json& item : data)
-    {
-        LeaderboardEntry entry;
-        entry.playerName = item.value("playerName", "");
-        entry.score = item.value("score", 0);
-        entry.stars = item.value("stars", 0);
-        entries.push_back(std::move(entry));
-    }
-
-    Logger::info("Leaderboard loaded.");
-    return entries;
+    return fetchLeaderboardWithStatus( levelId ).entries;
 }
 
 }  // namespace angry
