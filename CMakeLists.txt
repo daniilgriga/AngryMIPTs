@@ -94,6 +94,7 @@ target_link_libraries(angry_physics PUBLIC ${ANGRY_BOX2D_TARGET})
 add_executable(${PROJECT_NAME}
     src/main.cpp
     src/ui/scene_manager.cpp
+    src/ui/login_scene.cpp
     src/ui/menu_scene.cpp
     src/ui/game_scene.cpp
     src/ui/view_utils.cpp

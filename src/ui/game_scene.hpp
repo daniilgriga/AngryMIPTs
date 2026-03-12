@@ -1,4 +1,5 @@
 #pragma once
+#include "data/account_service.hpp"
 #include "data/level_loader.hpp"
 #include "data/OnlineScoreClient.hpp"
 #include "data/score_saver.hpp"
@@ -80,8 +81,8 @@ private:
     SceneId pending_scene_ = SceneId::None;
     float end_delay_ = 0.f;
     int level_id_ = -1;
+    AccountService* accounts_ = nullptr;
     std::string scores_path_;
-    std::string player_name_ = "Player";
 
     struct LeaderboardAsyncState
     {
@@ -122,6 +123,7 @@ private:
     float smoothed_fps_ = 60.0f;
     float vfx_load_factor_ = 1.0f;
     bool render_targets_dirty_ = true;
+    bool snapshot_ready_ = false;  // false until first Running snapshot received after load
 
     static WorldSnapshot make_mock_snapshot();
     void finish_level();
@@ -129,7 +131,7 @@ private:
     void rebuild_render_targets ( sf::Vector2u size );
 
 public:
-    explicit GameScene ( const sf::Font& font );
+    explicit GameScene ( const sf::Font& font, AccountService* accounts = nullptr );
 
     const LevelResult& get_last_result() const { return last_result_; }
 

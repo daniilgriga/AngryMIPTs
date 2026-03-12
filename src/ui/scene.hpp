@@ -6,6 +6,7 @@ namespace angry
 
 enum class SceneId
 {
+    Login,
     Menu,
     LevelSelect,
     Game,

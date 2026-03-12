@@ -33,8 +33,9 @@ void draw_soft_glow ( sf::RenderWindow& window, sf::Vector2f pos, float radius,
 
 }  // namespace
 
-MenuScene::MenuScene ( const sf::Font& font )
-    : font_( font )
+MenuScene::MenuScene ( const sf::Font& font, AccountService& accounts )
+    : accounts_ ( accounts )
+    , font_( font )
     , title_( font_, "AngryMipts", 64 )
     , prompt_( font_, "Press Enter to start", 24 )
 {

@@ -578,8 +578,9 @@ WorldSnapshot GameScene::make_mock_snapshot()
     return snap;
 }
 
-GameScene::GameScene ( const sf::Font& font )
-    : physics_ ( PhysicsMode::Threaded )
+GameScene::GameScene ( const sf::Font& font, AccountService* accounts )
+    : accounts_ ( accounts )
+    , physics_ ( PhysicsMode::Threaded )
     , snapshot_ ( make_mock_snapshot() )
     , font_ ( font )
     , hud_text_ ( font_, "", 20 )
@@ -687,6 +688,7 @@ void GameScene::load_level ( int level_id, const std::string& scores_path )
     render_targets_dirty_ = true;
     pending_result_token_ = 0;
     leaderboard_applied_ = true;
+    snapshot_ready_ = false;
 
     try
     {
@@ -750,7 +752,7 @@ void GameScene::finish_level()
         const std::uint64_t token = ++leaderboard_request_token_;
         pending_result_token_ = token;
         const std::shared_ptr<LeaderboardAsyncState> async_state = leaderboard_async_state_;
-        const std::string player_name = player_name_;
+        const std::string auth_token = accounts_ ? accounts_->token() : std::string{};
         const int level_id = level_id_;
         const int score_value = score;
         const int stars_value = stars;
@@ -759,7 +761,7 @@ void GameScene::finish_level()
 
         std::thread (
             [async_state, token, client = std::move ( client ),
-             player_name = std::move ( player_name ),
+             auth_token = std::move ( auth_token ),
              level_id, score_value, stars_value, won_value]() mutable
             {
                 std::vector<LeaderboardEntry> leaderboard;
@@ -768,17 +770,28 @@ void GameScene::finish_level()
                 {
                     if ( won_value )
                     {
-                        const bool submit_ok = client.submitScore (
-                            player_name, level_id, score_value, stars_value );
+                        Logger::info (
+                            "GameScene: submitting score levelId={} score={} stars={} token={}",
+                            level_id, score_value, stars_value,
+                            auth_token.empty() ? "(none)" : auth_token.substr ( 0, 12 ) + "..." );
+                        const bool submit_ok = client.submitScoreWithToken (
+                            auth_token, level_id, score_value, stars_value );
                         if ( !submit_ok )
                         {
                             Logger::info (
                                 "GameScene: backend submit failed, trying to load leaderboard anyway" );
                         }
+                        else
+                        {
+                            Logger::info ( "GameScene: submit ok for levelId={}", level_id );
+                        }
                     }
 
+                    Logger::info ( "GameScene: fetching leaderboard for levelId={}", level_id );
                     // Always try to load leaderboard, including lose flow.
                     leaderboard = client.fetchLeaderboard ( level_id );
+                    Logger::info ( "GameScene: leaderboard for levelId={} has {} entries",
+                                   level_id, leaderboard.size() );
                 }
                 catch ( const std::exception& e )
                 {
@@ -1286,7 +1299,20 @@ void GameScene::update()
 
     physics_.processCommands ( command_queue_ );
     physics_.step ( dt );
-    snapshot_ = physics_.getSnapshot();
+    const WorldSnapshot new_snap = physics_.getSnapshot();
+    // Discard stale Win/Lose snapshots from the previous level until physics
+    // confirms the new level is Running.
+    if ( !snapshot_ready_ )
+    {
+        if ( new_snap.status == LevelStatus::Running && !new_snap.objects.empty() )
+            snapshot_ready_ = true;
+        else
+        {
+            // Keep the fake Running snapshot set in load_level; don't update yet.
+        }
+    }
+    if ( snapshot_ready_ )
+        snapshot_ = new_snap;
     process_events();
 
     const bool low_vfx = vfx_load_factor_ < 0.72f;

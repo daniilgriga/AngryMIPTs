@@ -2,6 +2,7 @@
 
 #include "ui/game_scene.hpp"
 #include "ui/level_select_scene.hpp"
+#include "ui/login_scene.hpp"
 #include "ui/result_scene.hpp"
 
 namespace angry

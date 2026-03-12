@@ -18,4 +18,5 @@ vcpkg_installed/
 conan/
 
 scores.json
+session.json
 assets/textures/generated/

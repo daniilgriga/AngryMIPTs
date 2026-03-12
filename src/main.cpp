@@ -1,5 +1,7 @@
+#include "data/account_service.hpp"
 #include "ui/game_scene.hpp"
 #include "ui/level_select_scene.hpp"
+#include "ui/login_scene.hpp"
 #include "ui/menu_scene.hpp"
 #include "ui/result_scene.hpp"
 #include "ui/scene_manager.hpp"
@@ -124,16 +126,22 @@ int main()
 
     recreateWindow ( true );
 
+    const std::string sessionPath = resolveProjectPath ( "session.json" );
+    angry::AccountService accounts ( sessionPath );
+    accounts.loadSession();
+
     auto level_select = std::make_unique<angry::LevelSelectScene> ( font );
     level_select->load_data ( resolveProjectPath ( "levels" ),
                               resolveProjectPath ( "scores.json" ) );
 
     angry::SceneManager scenes;
-    scenes.add_scene ( angry::SceneId::Menu, std::make_unique<angry::MenuScene> ( font ) );
+    scenes.add_scene ( angry::SceneId::Login,
+                       std::make_unique<angry::LoginScene> ( font, accounts ) );
+    scenes.add_scene ( angry::SceneId::Menu, std::make_unique<angry::MenuScene> ( font, accounts ) );
     scenes.add_scene ( angry::SceneId::LevelSelect, std::move ( level_select ) );
-    scenes.add_scene ( angry::SceneId::Game, std::make_unique<angry::GameScene> ( font ) );
+    scenes.add_scene ( angry::SceneId::Game, std::make_unique<angry::GameScene> ( font, &accounts ) );
     scenes.add_scene ( angry::SceneId::Result, std::make_unique<angry::ResultScene> ( font ) );
-    scenes.switch_to ( angry::SceneId::Menu );
+    scenes.switch_to ( angry::SceneId::Login );
 
     while ( window.isOpen() )
     {
