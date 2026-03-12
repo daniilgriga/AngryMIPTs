@@ -114,6 +114,12 @@ public:
         return requestTargets_;
     }
 
+    std::vector<std::string> rawRequests() const
+    {
+        std::lock_guard<std::mutex> lock( requestsMutex_ );
+        return rawRequests_;
+    }
+
 private:
     void stop()
     {
@@ -173,6 +179,7 @@ private:
                     std::lock_guard<std::mutex> lock( requestsMutex_ );
                     requestTargets_.push_back(
                         req.substr( firstSpace + 1, secondSpace - firstSpace - 1 ) );
+                    rawRequests_.push_back( req );
                 }
             }
 
@@ -203,6 +210,7 @@ private:
 
     mutable std::mutex requestsMutex_;
     std::vector<std::string> requestTargets_;
+    std::vector<std::string> rawRequests_;
 };
 
 }  // namespace
@@ -311,5 +319,35 @@ TEST( OnlineScoreClient, SubmitScoreReturnsFalseOnConnectionFailure )
     // Port 1 is expected to be closed in normal user environments; this should fail fast.
     angry::OnlineScoreClient client( "http://127.0.0.1:1" );
     const bool ok = client.submitScore( "NoServer", 1, 100, 1 );
+    EXPECT_FALSE( ok );
+}
+
+TEST( OnlineScoreClient, SubmitScoreWithTokenSendsBearerHeader )
+{
+    if ( !canBindLoopbackSocket() )
+    {
+        GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
+    }
+
+    LocalMockHttpServer server( {LocalMockHttpServer::ScriptedResponse{201, R"({"ok":true})"}} );
+    angry::OnlineScoreClient client( server.baseUrl() );
+
+    const bool ok = client.submitScoreWithToken( "jwt-token-xyz", 7, 4000, 2 );
+    EXPECT_TRUE( ok );
+    EXPECT_EQ( server.requestCount(), 1 );
+
+    const auto targets = server.requestTargets();
+    ASSERT_FALSE( targets.empty() );
+    EXPECT_NE( targets.front().find( "/scores" ), std::string::npos );
+
+    const auto raws = server.rawRequests();
+    ASSERT_FALSE( raws.empty() );
+    EXPECT_NE( raws.front().find( "Authorization: Bearer jwt-token-xyz" ), std::string::npos );
+}
+
+TEST( OnlineScoreClient, SubmitScoreWithTokenReturnsFalseOnEmptyToken )
+{
+    angry::OnlineScoreClient client( "http://127.0.0.1:1" );
+    const bool ok = client.submitScoreWithToken( "", 1, 100, 1 );
     EXPECT_FALSE( ok );
 }

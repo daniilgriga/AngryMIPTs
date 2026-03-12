@@ -65,10 +65,13 @@ include(GoogleTest)
 
 # Data library (C)
 add_library(angry_data
+    src/data/account_service.cpp
+    src/data/auth_client.cpp
     src/data/level_loader.cpp
     src/data/logger.cpp
     src/data/score_saver.cpp
     src/data/OnlineScoreClient.cpp
+    src/data/session_manager.cpp
 )
 target_include_directories(angry_data PUBLIC src)
 if(TARGET nlohmann_json::nlohmann_json)
@@ -152,3 +155,39 @@ target_link_libraries(angry_online_score_client_tests PRIVATE
     GTest::gtest_main
 )
 gtest_discover_tests(angry_online_score_client_tests)
+
+# Data session manager tests (no UI dependency)
+add_executable(angry_session_manager_tests
+    tests/session_manager_tests.cpp
+)
+target_include_directories(angry_session_manager_tests PRIVATE src)
+target_link_libraries(angry_session_manager_tests PRIVATE
+    angry_data
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(angry_session_manager_tests)
+
+# Data auth client tests (no UI dependency)
+add_executable(angry_auth_client_tests
+    tests/auth_client_tests.cpp
+)
+target_include_directories(angry_auth_client_tests PRIVATE src)
+target_link_libraries(angry_auth_client_tests PRIVATE
+    angry_data
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(angry_auth_client_tests)
+
+# Data account service tests (no UI dependency)
+add_executable(angry_account_service_tests
+    tests/account_service_tests.cpp
+)
+target_include_directories(angry_account_service_tests PRIVATE src)
+target_link_libraries(angry_account_service_tests PRIVATE
+    angry_data
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(angry_account_service_tests)
