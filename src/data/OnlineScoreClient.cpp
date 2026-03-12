@@ -156,9 +156,9 @@ bool OnlineScoreClient::submitScore(
     return true;
 }
 
-std::vector<LeaderboardEntry> OnlineScoreClient::fetchLeaderboard(int levelId)
+LeaderboardFetchResult OnlineScoreClient::fetchLeaderboardWithStatus(int levelId)
 {
-    std::vector<LeaderboardEntry> entries;
+    LeaderboardFetchResult result;
 
     const cpr::Response response = performRequestWithRetry(
         "fetchLeaderboard",
@@ -173,7 +173,8 @@ std::vector<LeaderboardEntry> OnlineScoreClient::fetchLeaderboard(int levelId)
     if ( response.error.code != cpr::ErrorCode::OK )
     {
         Logger::error( "OnlineScoreClient::fetchLeaderboard failed after retries." );
-        return entries;
+        result.status = LeaderboardFetchStatus::Unavailable;
+        return result;
     }
 
     if ( !isHttpOk( response.status_code ) )
@@ -181,23 +182,26 @@ std::vector<LeaderboardEntry> OnlineScoreClient::fetchLeaderboard(int levelId)
         Logger::error(
             "OnlineScoreClient::fetchLeaderboard failed: final http status={}",
             response.status_code );
-        return entries;
+        result.status = LeaderboardFetchStatus::Unavailable;
+        return result;
     }
 
     const json data = json::parse( response.text, nullptr, false );
     if ( data.is_discarded() )
     {
         Logger::error( "OnlineScoreClient::fetchLeaderboard failed: invalid JSON payload." );
-        return entries;
+        result.status = LeaderboardFetchStatus::InvalidResponse;
+        return result;
     }
 
     if ( !data.is_array() )
     {
         Logger::error( "OnlineScoreClient::fetchLeaderboard failed: expected JSON array." );
-        return entries;
+        result.status = LeaderboardFetchStatus::InvalidResponse;
+        return result;
     }
 
-    entries.reserve( data.size() );
+    result.entries.reserve( data.size() );
     for ( const json& item : data )
     {
         if ( !item.is_object() )
@@ -211,11 +215,19 @@ std::vector<LeaderboardEntry> OnlineScoreClient::fetchLeaderboard(int levelId)
         entry.playerName = item.value( "playerName", "" );
         entry.score = item.value( "score", 0 );
         entry.stars = item.value( "stars", 0 );
-        entries.push_back( std::move( entry ) );
+        result.entries.push_back( std::move( entry ) );
     }
 
-    Logger::info( "Leaderboard loaded: {} entries.", entries.size() );
-    return entries;
+    result.status = result.entries.empty()
+                        ? LeaderboardFetchStatus::Empty
+                        : LeaderboardFetchStatus::Ok;
+    Logger::info( "Leaderboard loaded: {} entries.", result.entries.size() );
+    return result;
+}
+
+std::vector<LeaderboardEntry> OnlineScoreClient::fetchLeaderboard(int levelId)
+{
+    return fetchLeaderboardWithStatus( levelId ).entries;
 }
 
 }  // namespace angry

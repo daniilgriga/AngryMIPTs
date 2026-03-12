@@ -13,12 +13,27 @@ struct LeaderboardEntry
     int stars = 0;
 };
 
+enum class LeaderboardFetchStatus
+{
+    Ok,
+    Empty,
+    Unavailable,
+    InvalidResponse,
+};
+
+struct LeaderboardFetchResult
+{
+    LeaderboardFetchStatus status = LeaderboardFetchStatus::Unavailable;
+    std::vector<LeaderboardEntry> entries;
+};
+
 class OnlineScoreClient
 {
 public:
     explicit OnlineScoreClient(std::string baseUrl = "");
 
     bool submitScore(const std::string& playerName, int levelId, int score, int stars);
+    LeaderboardFetchResult fetchLeaderboardWithStatus(int levelId);
     std::vector<LeaderboardEntry> fetchLeaderboard(int levelId);
 
 private:
