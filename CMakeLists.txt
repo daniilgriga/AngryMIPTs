@@ -153,3 +153,15 @@ target_link_libraries(angry_online_score_client_tests PRIVATE
     GTest::gtest_main
 )
 gtest_discover_tests(angry_online_score_client_tests)
+
+# Data session manager tests (no UI dependency)
+add_executable(angry_session_manager_tests
+    tests/session_manager_tests.cpp
+)
+target_include_directories(angry_session_manager_tests PRIVATE src)
+target_link_libraries(angry_session_manager_tests PRIVATE
+    angry_data
+    GTest::gtest
+    GTest::gtest_main
+)
+gtest_discover_tests(angry_session_manager_tests)
