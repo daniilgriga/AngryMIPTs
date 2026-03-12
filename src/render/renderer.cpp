@@ -13,7 +13,27 @@ namespace
 
 constexpr float kWorldW = 1920.f;
 constexpr float kWorldH = 1080.f;
-constexpr float kGroundY = 700.f;
+constexpr float kGroundY = 600.f;  // must match kGroundTopYpx in physics_engine.cpp
+constexpr float kPi = 3.14159265358979323846f;
+
+sf::Vector2f rotate_local ( sf::Vector2f v, float angle_deg )
+{
+    const float rad = angle_deg * kPi / 180.f;
+    const float cs = std::cos ( rad );
+    const float sn = std::sin ( rad );
+    return {v.x * cs - v.y * sn, v.x * sn + v.y * cs};
+}
+
+float hash01 ( uint32_t value )
+{
+    value ^= value >> 16u;
+    value *= 0x7feb352du;
+    value ^= value >> 15u;
+    value *= 0x846ca68bu;
+    value ^= value >> 16u;
+    return static_cast<float> ( value & 0x00ffffffu )
+           / static_cast<float> ( 0x01000000u );
+}
 
 std::string projectile_label ( ProjectileType type )
 {
@@ -32,7 +52,7 @@ std::string projectile_label ( ProjectileType type )
     case ProjectileType::Inflater:
         return "Inflater";
     case ProjectileType::Heavy:
-        return "Crusher";
+        return "Heavy";
     case ProjectileType::Splitter:
         return "Splitter";
     case ProjectileType::Standard:
@@ -84,11 +104,6 @@ void Renderer::draw_hud ( sf::RenderTarget& target, const WorldSnapshot& snapsho
     const sf::Vector2f card_size ( 420.f, 100.f );
     const sf::Vector2f card_pos ( 18.f, 16.f );
 
-    sf::RectangleShape card_shadow ( card_size );
-    card_shadow.setPosition ( card_pos + sf::Vector2f ( 6.f, 8.f ) );
-    card_shadow.setFillColor ( sf::Color ( 8, 12, 20, 110 ) );
-    target.draw ( card_shadow );
-
     sf::RectangleShape card ( card_size );
     card.setPosition ( card_pos );
     card.setFillColor ( sf::Color ( 10, 18, 34, 166 ) );
@@ -134,11 +149,6 @@ void Renderer::draw_hud ( sf::RenderTarget& target, const WorldSnapshot& snapsho
     const float rail_h = 52.f;
     const sf::Vector2f rail_pos ( ws.x - rail_w - 18.f, 16.f );
 
-    sf::RectangleShape rail_shadow ( {rail_w, rail_h} );
-    rail_shadow.setPosition ( rail_pos + sf::Vector2f ( 4.f, 6.f ) );
-    rail_shadow.setFillColor ( sf::Color ( 8, 12, 20, 110 ) );
-    target.draw ( rail_shadow );
-
     sf::RectangleShape rail ( {rail_w, rail_h} );
     rail.setPosition ( rail_pos );
     rail.setFillColor ( sf::Color ( 10, 16, 30, 160 ) );
@@ -168,17 +178,6 @@ void Renderer::draw_hud ( sf::RenderTarget& target, const WorldSnapshot& snapsho
         slot.setPosition ( {slot_x, base_y} );
         slot.setFillColor ( sf::Color ( 255, 255, 255, 18 ) );
         target.draw ( slot );
-
-        if ( front_projectile )
-        {
-            const float glow_r = radius + 9.f + pulse * 3.f;
-            sf::CircleShape glow ( glow_r );
-            glow.setOrigin ( {glow_r, glow_r} );
-            glow.setPosition ( {slot_x + slide_px, base_y} );
-            glow.setFillColor (
-                sf::Color ( 255, 235, 164, static_cast<uint8_t> ( 58.f + pulse * 62.f ) ) );
-            target.draw ( glow );
-        }
 
         if ( has_projectile )
         {
@@ -255,23 +254,105 @@ void Renderer::draw_background ( sf::RenderTarget& target )
     draw_cloud ( target, std::fmod ( 1200.f + t * 4.1f, kWorldW + 300.f ) - 150.f, 150.f, 1.0f );
     draw_cloud ( target, std::fmod ( 1600.f + t * 7.4f, kWorldW + 360.f ) - 180.f, 100.f, 0.6f );
 
-    // Grass
-    sf::RectangleShape grass ( {kWorldW, kWorldH - kGroundY} );
-    grass.setPosition ( {0.f, kGroundY} );
-    grass.setFillColor ( sf::Color ( 90, 170, 65 ) );
-    target.draw ( grass );
+    // --- Ground ---
+    // Earth body: layered gradient (grass → topsoil → dark soil)
+    {
+        const sf::Color c_grass  ( 88,  168,  62 );
+        const sf::Color c_top    ( 112, 78,   44 );
+        const sf::Color c_soil   ( 72,  50,   28 );
+        const sf::Color c_deep   ( 48,  34,   18 );
 
-    // Grass highlight strip
-    sf::RectangleShape grass_top ( {kWorldW, 8.f} );
-    grass_top.setPosition ( {0.f, kGroundY} );
-    grass_top.setFillColor ( sf::Color ( 110, 190, 75 ) );
-    target.draw ( grass_top );
+        // Layer 0: grass top band (kGroundY .. kGroundY+28)
+        sf::Vertex g0[] = {
+            {{0.f,      kGroundY},       c_grass},
+            {{kWorldW,  kGroundY},       c_grass},
+            {{kWorldW,  kGroundY + 28.f}, c_top},
+            {{0.f,      kGroundY + 28.f}, c_top},
+        };
+        target.draw ( g0, 4, sf::PrimitiveType::TriangleFan );
 
-    // Darker earth at very bottom
-    sf::RectangleShape earth ( {kWorldW, 30.f} );
-    earth.setPosition ( {0.f, kWorldH - 30.f} );
-    earth.setFillColor ( sf::Color ( 70, 120, 45 ) );
-    target.draw ( earth );
+        // Layer 1: topsoil (kGroundY+28 .. kGroundY+120)
+        sf::Vertex g1[] = {
+            {{0.f,      kGroundY + 28.f},  c_top},
+            {{kWorldW,  kGroundY + 28.f},  c_top},
+            {{kWorldW,  kGroundY + 120.f}, c_soil},
+            {{0.f,      kGroundY + 120.f}, c_soil},
+        };
+        target.draw ( g1, 4, sf::PrimitiveType::TriangleFan );
+
+        // Layer 2: deep soil (kGroundY+120 .. bottom)
+        sf::Vertex g2[] = {
+            {{0.f,      kGroundY + 120.f}, c_soil},
+            {{kWorldW,  kGroundY + 120.f}, c_soil},
+            {{kWorldW,  kWorldH},          c_deep},
+            {{0.f,      kWorldH},          c_deep},
+        };
+        target.draw ( g2, 4, sf::PrimitiveType::TriangleFan );
+    }
+
+    // Wavy grass edge: a thin strip with sinusoidal top profile
+    {
+        const int   segs     = 96;
+        const float seg_w    = kWorldW / static_cast<float> ( segs );
+        const float wave_amp = 4.f;
+        const float strip_h  = 10.f;
+        const sf::Color c_bright ( 128, 200, 72 );
+        const sf::Color c_mid    ( 98,  175,  58 );
+
+        sf::VertexArray wave ( sf::PrimitiveType::TriangleStrip,
+                               static_cast<std::size_t> ( ( segs + 1 ) * 2 ) );
+        for ( int i = 0; i <= segs; ++i )
+        {
+            const float x   = static_cast<float> ( i ) * seg_w;
+            const float top = kGroundY - wave_amp
+                              * ( 0.5f + 0.5f * std::sin ( x * 0.031f )
+                                       + 0.25f * std::sin ( x * 0.073f + 1.1f ) );
+            wave[static_cast<std::size_t> ( i * 2 )]     = { {x, top},           c_bright };
+            wave[static_cast<std::size_t> ( i * 2 + 1 )] = { {x, top + strip_h}, c_mid    };
+        }
+        target.draw ( wave );
+    }
+
+    // Grass blades: short vertical strokes procedurally scattered
+    {
+        const int   blade_count = 180;
+        const float base_y      = kGroundY;
+        sf::VertexArray blades ( sf::PrimitiveType::Lines,
+                                 static_cast<std::size_t> ( blade_count * 2 ) );
+        for ( int i = 0; i < blade_count; ++i )
+        {
+            // deterministic pseudo-random position & height from index
+            const uint32_t h1 = static_cast<uint32_t> ( i ) * 2654435761u;
+            const uint32_t h2 = h1 ^ ( h1 >> 16u );
+            const float x     = static_cast<float> ( h1 & 0xFFFFu ) / 65535.f * kWorldW;
+            const float lean  = ( static_cast<float> ( h2 & 0xFFu ) / 255.f - 0.5f ) * 6.f;
+            const float ht    = 8.f + static_cast<float> ( h2 >> 24u ) / 255.f * 10.f;
+
+            const float wave_offset = -( 0.5f + 0.5f * std::sin ( x * 0.031f )
+                                                + 0.25f * std::sin ( x * 0.073f + 1.1f ) ) * 4.f;
+
+            const uint8_t g = static_cast<uint8_t> ( 160 + ( h2 & 0x1Fu ) );
+            const sf::Color c_base ( 60,  g,  40, 200 );
+            const sf::Color c_tip  ( 110, static_cast<uint8_t>(g+30u > 255u ? 255u : g+30u), 60, 140 );
+
+            blades[static_cast<std::size_t> ( i * 2 )]     = { {x,        base_y + wave_offset},         c_base };
+            blades[static_cast<std::size_t> ( i * 2 + 1 )] = { {x + lean, base_y + wave_offset - ht},    c_tip  };
+        }
+        target.draw ( blades );
+    }
+
+    // Soil texture: horizontal scan lines suggesting layered earth
+    {
+        const int lines = 12;
+        for ( int i = 0; i < lines; ++i )
+        {
+            const float y      = kGroundY + 30.f + static_cast<float> ( i ) * 8.f;
+            const uint8_t a    = static_cast<uint8_t> ( 18 + i * 2 );
+            const sf::Color lc ( 255, 220, 150, a );
+            sf::Vertex ln[] = { {{0.f, y}, lc}, {{kWorldW, y}, lc} };
+            target.draw ( ln, 2, sf::PrimitiveType::Lines );
+        }
+    }
 }
 
 void draw_hill ( sf::RenderTarget& target, float cx, float base_y,
@@ -314,24 +395,78 @@ void draw_cloud ( sf::RenderTarget& target, float x, float y, float scale )
     blob ( 30.f, -25.f, 30.f );
 }
 
+// Darkens a color for static/indestructible blocks to signal they are immovable.
+static sf::Color static_tint ( sf::Color c )
+{
+    return sf::Color (
+        static_cast<uint8_t> ( c.r * 0.55f ),
+        static_cast<uint8_t> ( c.g * 0.55f ),
+        static_cast<uint8_t> ( c.b * 0.55f ),
+        c.a );
+}
+
 void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj )
 {
-    const bool uses_hp = ( obj.kind == ObjectSnapshot::Kind::Block
-                           || obj.kind == ObjectSnapshot::Kind::Target );
+    const bool is_block = ( obj.kind == ObjectSnapshot::Kind::Block );
+    const bool uses_hp = is_block || ( obj.kind == ObjectSnapshot::Kind::Target );
+    const bool is_triangle = is_block && ( obj.shape == BlockShape::Triangle );
 
+    float draw_w = obj.sizePx.x;
+    float draw_h = obj.sizePx.y;
+    if ( obj.radiusPx > 0.f )
+    {
+        draw_w = obj.radiusPx * 2.f;
+        draw_h = obj.radiusPx * 2.f;
+    }
+    if ( draw_w <= 0.f || draw_h <= 0.f )
+        return;
+
+    // --- Triangle blocks ---
+    if ( is_triangle )
+    {
+        // Physics triangle: bottom-left, bottom-right, top-center
+        const float hw = obj.sizePx.x * 0.5f;
+        const float hh = obj.sizePx.y * 0.5f;
+
+        const sf::Texture& tex = textures_.block ( obj.material );
+        const sf::Vector2u ts = tex.getSize();
+
+        sf::ConvexShape tri ( 3 );
+        tri.setPoint ( 0, {-hw,  hh} );
+        tri.setPoint ( 1, { hw,  hh} );
+        tri.setPoint ( 2, {  0, -hh} );
+        tri.setOrigin ( {0.f, 0.f} );
+        tri.setPosition ( {obj.positionPx.x, obj.positionPx.y} );
+        tri.setRotation ( sf::degrees ( obj.angleDeg ) );
+        tri.setTexture ( &tex );
+        // Map texture corners to triangle vertices
+        tri.setTextureRect ( sf::IntRect ( {0, 0},
+            {static_cast<int> ( ts.x ), static_cast<int> ( ts.y )} ) );
+
+        sf::Color tint = obj.isStatic ? static_tint ( sf::Color::White )
+                                      : tint_by_hp ( sf::Color::White, obj.hpNormalized );
+        tri.setFillColor ( tint );
+
+        if ( obj.isStatic )
+        {
+            tri.setOutlineThickness ( 2.f );
+            tri.setOutlineColor ( sf::Color ( 20, 20, 20, 180 ) );
+        }
+
+        target.draw ( tri );
+        if ( !obj.isStatic )
+            draw_damage_overlay ( target, obj );
+        return;
+    }
+
+    // --- Textured blocks, targets, projectiles ---
     const sf::Texture* texture = nullptr;
-    if ( obj.kind == ObjectSnapshot::Kind::Block )
-    {
+    if ( is_block )
         texture = &textures_.block ( obj.material );
-    }
     else if ( obj.kind == ObjectSnapshot::Kind::Target )
-    {
         texture = &textures_.target();
-    }
     else if ( obj.kind == ObjectSnapshot::Kind::Projectile )
-    {
         texture = &textures_.projectile ( obj.projectileType );
-    }
 
     if ( texture )
     {
@@ -340,27 +475,91 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
         const sf::Vector2f tex_size_f ( static_cast<float> ( tex_size.x ),
                                         static_cast<float> ( tex_size.y ) );
 
-        float draw_w = obj.sizePx.x;
-        float draw_h = obj.sizePx.y;
-        if ( obj.radiusPx > 0.f )
-        {
-            draw_w = obj.radiusPx * 2.f;
-            draw_h = obj.radiusPx * 2.f;
-        }
-
-        if ( draw_w <= 0.f || draw_h <= 0.f )
-            return;
-
         sprite.setOrigin ( {tex_size_f.x * 0.5f, tex_size_f.y * 0.5f} );
         sprite.setScale ( {draw_w / tex_size_f.x, draw_h / tex_size_f.y} );
         sprite.setPosition ( {obj.positionPx.x, obj.positionPx.y} );
         sprite.setRotation ( sf::degrees ( obj.angleDeg ) );
-        sprite.setColor ( uses_hp ? tint_by_hp ( sf::Color::White, obj.hpNormalized )
-                                  : sf::Color::White );
+
+        sf::Color tint = sf::Color::White;
+        if ( is_block && obj.isStatic )
+            tint = static_tint ( sf::Color::White );
+        else if ( uses_hp )
+            tint = tint_by_hp ( sf::Color::White, obj.hpNormalized );
+        sprite.setColor ( tint );
+
         target.draw ( sprite );
+
+        if ( is_block )
+        {
+            if ( obj.isStatic )
+            {
+                // Dark outline to visually mark static/indestructible platforms
+                const float ow = draw_w + 4.f;
+                const float oh = draw_h + 4.f;
+                sf::RectangleShape outline ( {ow, oh} );
+                outline.setOrigin ( {ow * 0.5f, oh * 0.5f} );
+                outline.setPosition ( {obj.positionPx.x, obj.positionPx.y} );
+                outline.setRotation ( sf::degrees ( obj.angleDeg ) );
+                outline.setFillColor ( sf::Color::Transparent );
+                outline.setOutlineThickness ( 2.f );
+                outline.setOutlineColor ( sf::Color ( 20, 20, 20, 160 ) );
+                target.draw ( outline );
+            }
+            else
+            {
+                draw_damage_overlay ( target, obj );
+            }
+        }
+
+        if ( obj.kind == ObjectSnapshot::Kind::Projectile
+             && obj.projectileType == ProjectileType::Bomber
+             && obj.radiusPx > 0.f )
+        {
+            static sf::Clock bomber_idle_clock;
+            const float t = bomber_idle_clock.getElapsedTime().asSeconds();
+            const float pulse = 0.5f + 0.5f * std::sin ( t * 7.0f + obj.positionPx.x * 0.012f );
+
+            const float aura_r = obj.radiusPx * ( 0.70f + pulse * 0.12f );
+            sf::CircleShape aura ( aura_r );
+            aura.setOrigin ( {aura_r, aura_r} );
+            aura.setPosition ( {obj.positionPx.x, obj.positionPx.y} );
+            aura.setFillColor ( sf::Color ( 255, 146, 70,
+                                            static_cast<uint8_t> ( 24.f + pulse * 32.f ) ) );
+            target.draw ( aura );
+
+            sf::CircleShape heat_ring ( obj.radiusPx * 0.64f );
+            heat_ring.setOrigin ( {obj.radiusPx * 0.64f, obj.radiusPx * 0.64f} );
+            heat_ring.setPosition ( {obj.positionPx.x, obj.positionPx.y + obj.radiusPx * 0.08f} );
+            heat_ring.setFillColor ( sf::Color::Transparent );
+            heat_ring.setOutlineThickness ( std::max ( 1.4f, obj.radiusPx * 0.08f ) );
+            heat_ring.setOutlineColor (
+                sf::Color ( 255, 192, 122, static_cast<uint8_t> ( 98.f + pulse * 70.f ) ) );
+            target.draw ( heat_ring );
+
+            const sf::Vector2f fuse_local ( obj.radiusPx * 0.62f, -obj.radiusPx * 0.78f );
+            const sf::Vector2f fuse_offset = rotate_local ( fuse_local, obj.angleDeg );
+            const sf::Vector2f fuse_tip ( obj.positionPx.x + fuse_offset.x,
+                                          obj.positionPx.y + fuse_offset.y );
+
+            const float spark_glow_r = std::max ( 3.5f, obj.radiusPx * ( 0.17f + pulse * 0.04f ) );
+            sf::CircleShape spark_glow ( spark_glow_r );
+            spark_glow.setOrigin ( {spark_glow_r, spark_glow_r} );
+            spark_glow.setPosition ( fuse_tip );
+            spark_glow.setFillColor (
+                sf::Color ( 255, 180, 98, static_cast<uint8_t> ( 120.f + pulse * 80.f ) ) );
+            target.draw ( spark_glow );
+
+            const float spark_core_r = std::max ( 1.8f, obj.radiusPx * 0.08f );
+            sf::CircleShape spark_core ( spark_core_r );
+            spark_core.setOrigin ( {spark_core_r, spark_core_r} );
+            spark_core.setPosition ( fuse_tip );
+            spark_core.setFillColor ( sf::Color ( 255, 240, 174, 228 ) );
+            target.draw ( spark_core );
+        }
         return;
     }
 
+    // --- Fallback: primitive shapes (no texture available) ---
     if ( obj.radiusPx > 0.f )
     {
         sf::CircleShape shape ( obj.radiusPx );
@@ -375,20 +574,18 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
             shape.setOutlineColor ( projectile_outline ( obj.projectileType ) );
             shape.setOutlineThickness ( 2.f );
         }
-        else if ( obj.kind == ObjectSnapshot::Kind::Block )
-        {
-            color = material_color ( obj.material );
-        }
         else
-        {
-            color = kind_color ( obj.kind );
-        }
+            color = is_block ? material_color ( obj.material ) : kind_color ( obj.kind );
 
-        if ( uses_hp )
+        if ( is_block && obj.isStatic )
+            color = static_tint ( color );
+        else if ( uses_hp )
             color = tint_by_hp ( color, obj.hpNormalized );
         shape.setFillColor ( color );
 
         target.draw ( shape );
+        if ( is_block && !obj.isStatic )
+            draw_damage_overlay ( target, obj );
     }
     else
     {
@@ -408,12 +605,22 @@ void Renderer::draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj
         }
         else
             color = material_color ( obj.material );
-        if ( uses_hp )
+
+        if ( is_block && obj.isStatic )
+            color = static_tint ( color );
+        else if ( uses_hp )
             color = tint_by_hp ( color, obj.hpNormalized );
         shape.setFillColor ( color );
 
         target.draw ( shape );
+        if ( is_block && !obj.isStatic )
+            draw_damage_overlay ( target, obj );
     }
+}
+
+const sf::Texture& Renderer::projectile_texture ( ProjectileType type )
+{
+    return textures_.projectile ( type );
 }
 
 void Renderer::draw_slingshot ( sf::RenderTarget& target, const SlingshotState& sling )
@@ -435,6 +642,120 @@ void Renderer::draw_slingshot ( sf::RenderTarget& target, const SlingshotState& 
     draw_piece ( {sling.basePx.x, sling.basePx.y}, {14.f, 62.f} );
     draw_piece ( {sling.basePx.x - 10.f, sling.basePx.y - 54.f}, {8.f, 26.f} );
     draw_piece ( {sling.basePx.x + 10.f, sling.basePx.y - 54.f}, {8.f, 26.f} );
+}
+
+void Renderer::draw_damage_overlay ( sf::RenderTarget& target, const ObjectSnapshot& obj )
+{
+    if ( obj.kind != ObjectSnapshot::Kind::Block )
+        return;
+
+    const float hp = std::clamp ( obj.hpNormalized, 0.f, 1.f );
+    const float damage = 1.f - hp;
+    if ( damage < 0.22f )
+        return;
+
+    const float w = obj.radiusPx > 0.f ? obj.radiusPx * 2.f : obj.sizePx.x;
+    const float h = obj.radiusPx > 0.f ? obj.radiusPx * 2.f : obj.sizePx.y;
+    if ( w <= 1.f || h <= 1.f )
+        return;
+
+    auto crack_color = [this, damage] ( Material mat )
+    {
+        const uint8_t alpha = static_cast<uint8_t> (
+            std::clamp ( 62.f + damage * 154.f, 0.f, 220.f ) );
+        switch ( mat )
+        {
+        case Material::Wood:
+            return sf::Color ( 66, 40, 24, alpha );
+        case Material::Stone:
+            return sf::Color ( 92, 96, 106, alpha );
+        case Material::Glass:
+            return sf::Color ( 202, 244, 255, alpha );
+        case Material::Ice:
+            return sf::Color ( 228, 248, 255, alpha );
+        default:
+            return sf::Color ( 38, 38, 38, alpha );
+        }
+    };
+
+    const sf::Color c = crack_color ( obj.material );
+    const int crack_count = damage > 0.72f ? 7 : ( damage > 0.46f ? 5 : 3 );
+    const float half_w = w * 0.5f;
+    const float half_h = h * 0.5f;
+    const float max_r = std::min ( half_w, half_h ) * 0.94f;
+
+    auto clamp_local = [half_w, half_h, max_r, &obj] ( sf::Vector2f p )
+    {
+        if ( obj.radiusPx > 0.f )
+        {
+            const float len = std::sqrt ( p.x * p.x + p.y * p.y );
+            if ( len > max_r && len > 0.0001f )
+                p *= max_r / len;
+            return p;
+        }
+
+        p.x = std::clamp ( p.x, -half_w * 0.94f, half_w * 0.94f );
+        p.y = std::clamp ( p.y, -half_h * 0.94f, half_h * 0.94f );
+        return p;
+    };
+
+    auto to_world = [&obj] ( sf::Vector2f local )
+    {
+        const sf::Vector2f r = rotate_local ( local, obj.angleDeg );
+        return sf::Vector2f ( obj.positionPx.x + r.x, obj.positionPx.y + r.y );
+    };
+
+    sf::VertexArray crack_lines ( sf::PrimitiveType::Lines );
+    crack_lines.resize ( static_cast<std::size_t> ( crack_count * 6 ) );
+
+    std::size_t v = 0;
+    for ( int i = 0; i < crack_count; ++i )
+    {
+        const uint32_t seed = static_cast<uint32_t> ( obj.id ) * 1103515245u
+                              + static_cast<uint32_t> ( i ) * 12345u;
+        const float a0 = hash01 ( seed + 11u );
+        const float a1 = hash01 ( seed + 23u );
+        const float a2 = hash01 ( seed + 37u );
+        const float a3 = hash01 ( seed + 53u );
+
+        const float theta = a0 * 2.f * kPi;
+        const sf::Vector2f dir ( std::cos ( theta ), std::sin ( theta ) );
+        const sf::Vector2f normal ( -dir.y, dir.x );
+
+        sf::Vector2f center (
+            ( a1 - 0.5f ) * w * 0.50f,
+            ( a2 - 0.5f ) * h * 0.50f );
+        center = clamp_local ( center );
+
+        const float len = ( std::min ( w, h ) * ( 0.30f + a3 * 0.33f ) )
+                          * ( 0.85f + damage * 0.38f );
+        const float wobble = len * ( 0.10f + a2 * 0.08f );
+
+        sf::Vector2f p0 = clamp_local ( center - dir * ( len * 0.52f ) );
+        sf::Vector2f p1 = clamp_local ( center - dir * ( len * 0.16f ) + normal * wobble );
+        sf::Vector2f p2 = clamp_local ( center + dir * ( len * 0.14f ) - normal * wobble * 0.82f );
+        sf::Vector2f p3 = clamp_local ( center + dir * ( len * 0.52f ) );
+
+        const sf::Vector2f w0 = to_world ( p0 );
+        const sf::Vector2f w1 = to_world ( p1 );
+        const sf::Vector2f w2 = to_world ( p2 );
+        const sf::Vector2f w3 = to_world ( p3 );
+
+        crack_lines[v].position = w0;
+        crack_lines[v++].color = c;
+        crack_lines[v].position = w1;
+        crack_lines[v++].color = c;
+        crack_lines[v].position = w1;
+        crack_lines[v++].color = c;
+        crack_lines[v].position = w2;
+        crack_lines[v++].color = c;
+        crack_lines[v].position = w2;
+        crack_lines[v++].color = c;
+        crack_lines[v].position = w3;
+        crack_lines[v++].color = c;
+    }
+
+    target.draw ( crack_lines );
 }
 
 sf::Color Renderer::material_color ( Material mat )

@@ -20,8 +20,9 @@ private:
     std::vector<sf::Text> level_texts_;
     std::string scores_path_;
 
-    int selected_ = 0;
-    int selected_level_id_ = -1;
+    int   selected_ = 0;
+    int   selected_level_id_ = -1;
+    float scroll_offset_ = 0.f;  // pixels scrolled down in the list
 
     void rebuild_texts();
     const LevelScore* find_score ( int level_id ) const;

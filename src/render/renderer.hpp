@@ -13,6 +13,7 @@ public:
     void draw_snapshot ( sf::RenderTarget& target, const WorldSnapshot& snapshot );
     void draw_hud ( sf::RenderTarget& target, const WorldSnapshot& snapshot,
                     sf::Text& score_text );
+    const sf::Texture& projectile_texture ( ProjectileType type );
 
 private:
     TextureManager textures_;
@@ -20,6 +21,7 @@ private:
     void draw_object ( sf::RenderTarget& target, const ObjectSnapshot& obj );
     void draw_slingshot ( sf::RenderTarget& target, const SlingshotState& sling );
     void draw_background ( sf::RenderTarget& target );
+    void draw_damage_overlay ( sf::RenderTarget& target, const ObjectSnapshot& obj );
 
     sf::Color material_color ( Material mat );
     sf::Color kind_color ( ObjectSnapshot::Kind kind );

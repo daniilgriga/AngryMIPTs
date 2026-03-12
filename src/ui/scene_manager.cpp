@@ -67,6 +67,23 @@ void SceneManager::update()
         return;
 
     scenes_[current_id_]->update();
+
+    // Allow GameScene to trigger transitions without waiting for an input event.
+    if ( current_id_ == SceneId::Game )
+    {
+        auto* game = get_scene<GameScene> ( SceneId::Game );
+        if ( !game )
+            return;
+
+        const SceneId next = game->poll_pending_scene();
+        if ( next == SceneId::Result )
+        {
+            auto* result = get_scene<ResultScene> ( SceneId::Result );
+            if ( result )
+                result->set_result ( game->get_last_result() );
+            switch_to ( SceneId::Result );
+        }
+    }
 }
 
 void SceneManager::render ( sf::RenderWindow& window )

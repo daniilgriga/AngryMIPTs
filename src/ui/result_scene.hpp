@@ -17,10 +17,10 @@ private:
     sf::Font font_;
     sf::Text title_;
     sf::Text score_text_;
-    sf::Text stars_text_;
     sf::Text prompt_;
 
     LevelResult result_;
+    sf::Clock   star_clock_;  // reset on set_result, drives bounce-in animation
 
 public:
     explicit ResultScene ( const sf::Font& font );

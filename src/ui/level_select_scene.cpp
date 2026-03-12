@@ -2,6 +2,7 @@
 
 #include "data/logger.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <cmath>
 
@@ -28,7 +29,7 @@ void draw_vertical_gradient ( sf::RenderWindow& window,
 LevelSelectScene::LevelSelectScene ( const sf::Font& font )
     : font_ ( font )
     , title_ ( font_, "Select Level", 42 )
-    , prompt_ ( font_, "[Enter] Play   [Backspace] Menu", 18 )
+    , prompt_ ( font_, "[Enter] Play   [Backspace] Menu   [Scroll] Navigate", 18 )
 {
     title_.setFillColor ( sf::Color::White );
     prompt_.setFillColor ( sf::Color ( 230, 245, 255 ) );
@@ -145,6 +146,14 @@ SceneId LevelSelectScene::handle_input ( const sf::Event& event )
             return SceneId::Game;
         }
     }
+
+    if ( const auto* wheel = event.getIf<sf::Event::MouseWheelScrolled>() )
+    {
+        scroll_offset_ -= wheel->delta * 52.f;
+        if ( scroll_offset_ < 0.f )
+            scroll_offset_ = 0.f;
+    }
+
     return SceneId::None;
 }
 
@@ -194,15 +203,39 @@ void LevelSelectScene::render ( sf::RenderWindow& window )
     title_.setPosition ( {ws.x / 2.f, ws.y * 0.12f} );
     window.draw ( title_ );
 
-    float start_y = ws.y * 0.28f;
-    float step = 52.f;
+    const float step        = 52.f;
+    const float list_top    = ws.y * 0.22f;
+    const float list_bottom = ws.y * 0.79f;  // panel bottom is ws.y*0.81, keep margin
+    const float list_h      = list_bottom - list_top;
+    const float total_h     = static_cast<float> ( level_texts_.size() ) * step;
+    const float max_scroll  = std::max ( 0.f, total_h - list_h );
+
+    // Auto-follow selected item
+    const float sel_y_local = static_cast<float> ( selected_ ) * step + step * 0.5f;
+    if ( sel_y_local - scroll_offset_ < step )
+        scroll_offset_ = std::max ( 0.f, sel_y_local - step );
+    if ( sel_y_local - scroll_offset_ > list_h - step )
+        scroll_offset_ = std::min ( max_scroll, sel_y_local - list_h + step );
+    scroll_offset_ = std::clamp ( scroll_offset_, 0.f, max_scroll );
+
+    // Clip list area via scissor view
+    const sf::FloatRect list_rect ( {0.f, list_top}, {ws.x, list_h} );
+    sf::View list_view ( list_rect );
+    list_view.setViewport ( sf::FloatRect (
+        {0.f, list_top / ws.y},
+        {1.f, list_h  / ws.y} ) );
+    window.setView ( list_view );
 
     for ( int i = 0; i < static_cast<int> ( level_texts_.size() ); ++i )
     {
-        const float y = start_y + i * step;
-        const bool selected = ( i == selected_ );
+        const float y       = list_top + static_cast<float> ( i ) * step + step * 0.5f - scroll_offset_;
+        const bool  is_sel  = ( i == selected_ );
 
-        if ( selected )
+        // Skip items outside visible area
+        if ( y + step < list_top || y - step > list_bottom )
+            continue;
+
+        if ( is_sel )
         {
             sf::RectangleShape highlight ( {panel.getSize().x * 0.86f, 42.f} );
             highlight.setOrigin ( {highlight.getSize().x * 0.5f, highlight.getSize().y * 0.5f} );
@@ -215,14 +248,16 @@ void LevelSelectScene::render ( sf::RenderWindow& window )
         }
 
         auto& text = level_texts_[i];
-        text.setFillColor ( selected ? sf::Color ( 255, 247, 220 )
-                                     : sf::Color ( 228, 238, 248 ) );
+        text.setFillColor ( is_sel ? sf::Color ( 255, 247, 220 )
+                                   : sf::Color ( 228, 238, 248 ) );
         auto bounds = text.getLocalBounds();
         text.setOrigin ( {bounds.position.x + bounds.size.x / 2.f,
                           bounds.position.y + bounds.size.y / 2.f} );
         text.setPosition ( {ws.x / 2.f, y} );
         window.draw ( text );
     }
+
+    window.setView ( window.getDefaultView() );
 
     prompt_.setFillColor ( sf::Color ( 232, 246, 255,
                                        static_cast<uint8_t> ( 180.f + 70.f * pulse ) ) );

@@ -116,7 +116,6 @@ def normalize_projectile_type(value: object) -> str:
         "bomber": "Bomber",
         "dropper": "Dropper",
         "boomerang": "Boomerang",
-        "crusher": "Heavy",
         "heavy": "Heavy",
         "bubbler": "Bubbler",
         "inflater": "Inflater",
