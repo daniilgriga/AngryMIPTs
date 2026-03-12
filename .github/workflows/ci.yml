@@ -36,16 +36,19 @@ jobs:
         run: |
           echo "CMAKE_PREFIX_PATH=/opt/sfml-3" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=/opt/sfml-3/lib:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
 
-      - name: Configure ccache
+      - name: Prepare ccache
         run: |
           mkdir -p "$HOME/.ccache"
-          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
-          echo "CCACHE_MAXSIZE=2G" >> "$GITHUB_ENV"
           ccache --set-config=max_size=2G
           ccache --set-config=compression=true
           ccache --set-config=compiler_check=content
-          ccache --zero-stats
+          ccache --show-config
+          ccache --show-stats || true
+
+      - name: Clean previous build directory
+        run: rm -rf build-selfhosted
 
       - name: Configure
         run: |
@@ -56,7 +59,7 @@ jobs:
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
       - name: Build
-        run: cmake --build build-selfhosted --parallel 1
+        run: cmake --build build-selfhosted --parallel 2
 
       - name: Show ccache stats after build
         run: ccache --show-stats
