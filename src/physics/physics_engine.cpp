@@ -466,6 +466,7 @@ void PhysicsEngine::step(float dt)
         }
         if (!binding.isDestructible)
         {
+            ++i;
             continue;
         }
 
