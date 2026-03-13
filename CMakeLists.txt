@@ -4,19 +4,35 @@ project(AngryMipts LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-enable_testing()
+
+if(NOT EMSCRIPTEN)
+    enable_testing()
+endif()
 
 # Dependencies
 include(FetchContent)
 
-find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
+if(EMSCRIPTEN)
+    # ── Web build: Raylib (replaces SFML) ───────────────────
+    FetchContent_Declare(
+        raylib
+        GIT_REPOSITORY https://github.com/raysan5/raylib.git
+        GIT_TAG 5.5
+    )
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(raylib)
+else()
+    # ── Native build: SFML + cpr ─────────────────────────────
+    find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
 
-FetchContent_Declare(
-    cpr
-    GIT_REPOSITORY https://github.com/libcpr/cpr.git
-    GIT_TAG 1.10.4
-)
-FetchContent_MakeAvailable(cpr)
+    FetchContent_Declare(
+        cpr
+        GIT_REPOSITORY https://github.com/libcpr/cpr.git
+        GIT_TAG 1.10.4
+    )
+    FetchContent_MakeAvailable(cpr)
+endif()
 
 set(BOX2D_UNIT_TESTS OFF CACHE BOOL "Disable Box2D unit tests" FORCE)
 set(BOX2D_SAMPLES OFF CACHE BOOL "Disable Box2D samples" FORCE)
@@ -74,7 +90,11 @@ add_library(angry_data
     src/data/session_manager.cpp
 )
 target_include_directories(angry_data PUBLIC src)
-if(TARGET nlohmann_json::nlohmann_json)
+if(EMSCRIPTEN)
+    if(TARGET nlohmann_json::nlohmann_json)
+        target_link_libraries(angry_data PUBLIC nlohmann_json::nlohmann_json)
+    endif()
+elseif(TARGET nlohmann_json::nlohmann_json)
     target_link_libraries(angry_data PUBLIC nlohmann_json::nlohmann_json cpr::cpr)
 else()
     target_link_libraries(angry_data PUBLIC cpr::cpr)
@@ -107,17 +127,39 @@ add_executable(${PROJECT_NAME}
     src/render/sfx_player.cpp
 )
 target_include_directories(${PROJECT_NAME} PRIVATE src)
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    angry_data
-    angry_physics
-    SFML::Graphics
-    SFML::Window
-    SFML::System
-    SFML::Audio
-)
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    ANGRY_MIPTS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
-)
+
+if(EMSCRIPTEN)
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        angry_data
+        angry_physics
+        raylib
+    )
+    set(ASSETS_DIR "${CMAKE_SOURCE_DIR}/assets")
+    set(LEVELS_DIR "${CMAKE_SOURCE_DIR}/levels")
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -sUSE_GLFW=3
+        -sALLOW_MEMORY_GROWTH=1
+        -sMAX_WEBGL_VERSION=2
+        -sEXPORTED_RUNTIME_METHODS=cwrap
+        -sFORCE_FILESYSTEM=1
+        --preload-file "${ASSETS_DIR}@/assets"
+        --preload-file "${LEVELS_DIR}@/levels"
+        -sASSERTIONS=1
+    )
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
+else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE
+        angry_data
+        angry_physics
+        SFML::Graphics
+        SFML::Window
+        SFML::System
+        SFML::Audio
+    )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        ANGRY_MIPTS_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}"
+    )
+endif()
 
 # Smoke test (C)
 add_executable(angry_data_smoke
