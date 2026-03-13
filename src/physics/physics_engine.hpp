@@ -50,6 +50,13 @@ private:
         ProjectileType projectileType = ProjectileType::Standard;
         int settledFrames = 0;
         float settledTimeSec = 0.0f;
+        Vec2 boomerangStartPx{};
+        Vec2 boomerangLaunchDir{};
+        float boomerangTimeSinceLaunchSec = 0.0f;
+        float boomerangReturnTimeSec = 0.0f;
+        float boomerangCurveSign = 1.0f;
+        bool boomerangReturnRequested = false;
+        bool boomerangReturning = false;
     };
 
     void applyCommand(const Command& cmd);
