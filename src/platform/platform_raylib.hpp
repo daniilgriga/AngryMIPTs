@@ -424,16 +424,6 @@ struct RenderTexture
     const Texture& getTexture() const { return color_tex; }
 };
 
-// ── Shader stub (no-op on web) ───────────────────────────────
-
-struct Shader
-{
-    bool loaded = false;
-    bool loadFromMemory( const char* /*frag*/, int /*type*/ ) { return false; }
-    void setUniform( const char* /*name*/, float /*v*/ )      {}
-    void setUniform( const char* /*name*/, int /*v*/ )        {}
-};
-
 // ── Audio ────────────────────────────────────────────────────
 
 struct SoundBuffer
