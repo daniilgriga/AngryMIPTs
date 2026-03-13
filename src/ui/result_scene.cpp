@@ -62,19 +62,41 @@ void ResultScene::set_result ( const LevelResult& result )
     title_.setFillColor ( result_.win ? sf::Color ( 50, 200, 50 ) : sf::Color ( 200, 50, 50 ) );
 
     score_text_.setString ( "Score: " + std::to_string ( result_.score ) );
+
+    // Status note and color depend on win + auth + server state
     if ( result_.win )
     {
-        status_note_.setString ( result_.leaderboard.empty()
-            ? "Result saved locally. Leaderboard unavailable."
-            : "Result saved to leaderboard." );
+        if ( result_.logged_in
+             && result_.fetch_status == LeaderboardFetchStatus::Ok )
+        {
+            status_note_.setString ( "Result saved to leaderboard." );
+            status_note_.setFillColor ( sf::Color ( 100, 220, 140 ) );   // green
+        }
+        else if ( !result_.logged_in )
+        {
+            status_note_.setString ( "Login required for online result submission." );
+            status_note_.setFillColor ( sf::Color ( 210, 160, 40 ) );    // amber
+        }
+        else
+        {
+            // logged in but server not OK
+            status_note_.setString ( "Leaderboard unavailable." );
+            status_note_.setFillColor ( sf::Color ( 230, 130, 60 ) );    // orange
+        }
     }
     else
     {
         status_note_.setString ( "Level not completed: stars are not saved." );
+        status_note_.setFillColor ( sf::Color ( 255, 200, 210 ) );
     }
-    leaderboard_empty_.setString ( result_.win
-        ? "Leaderboard unavailable"
-        : "No data" );
+
+    // Leaderboard empty text
+    if ( result_.fetch_status == LeaderboardFetchStatus::Empty )
+        leaderboard_empty_.setString ( "No scores yet" );
+    else if ( result_.fetch_status == LeaderboardFetchStatus::Ok )
+        leaderboard_empty_.setString ( "" );
+    else
+        leaderboard_empty_.setString ( "Leaderboard unavailable" );
 }
 
 SceneId ResultScene::handle_input ( const sf::Event& event )
@@ -211,43 +233,45 @@ void ResultScene::render ( sf::RenderWindow& window )
     }
 
     score_text_.setFillColor ( sf::Color ( 236, 246, 255 ) );
-    status_note_.setFillColor ( result_.win
-        ? sf::Color ( 170, 235, 196 )
-        : sf::Color ( 255, 200, 210 ) );
     prompt_.setFillColor ( sf::Color ( 230, 245, 255,
                                        static_cast<uint8_t> ( 182.f + 70.f * pulse ) ) );
 
     center_text ( score_text_, ws.y * 0.57f );
     center_text ( status_note_, ws.y * 0.63f );
-    center_text ( leaderboard_title_, ws.y * 0.70f );
     center_text ( prompt_, ws.y * 0.84f );
 
     window.draw ( title_ );
     window.draw ( score_text_ );
     window.draw ( status_note_ );
-    window.draw ( leaderboard_title_ );
 
-    if ( result_.leaderboard.empty() )
+    // Leaderboard: show only when server returned Ok
+    if ( result_.fetch_status == LeaderboardFetchStatus::Ok )
     {
-        center_text ( leaderboard_empty_, ws.y * 0.76f );
-        window.draw ( leaderboard_empty_ );
-    }
-    else
-    {
-        const std::size_t max_rows = std::min<std::size_t> ( 5u, result_.leaderboard.size() );
-        for ( std::size_t i = 0; i < max_rows; ++i )
+        center_text ( leaderboard_title_, ws.y * 0.70f );
+        window.draw ( leaderboard_title_ );
+
+        if ( result_.leaderboard.empty() )
         {
-            const LeaderboardEntry& entry = result_.leaderboard[i];
-            const std::string name = entry.playerName.empty() ? "Player" : entry.playerName;
-            const std::string row_text =
-                std::to_string ( static_cast<int> ( i + 1u ) ) + ". " + name
-                + "   score: " + std::to_string ( entry.score )
-                + "   stars: " + std::to_string ( std::clamp ( entry.stars, 0, 3 ) );
+            center_text ( leaderboard_empty_, ws.y * 0.76f );
+            window.draw ( leaderboard_empty_ );
+        }
+        else
+        {
+            const std::size_t max_rows = std::min<std::size_t> ( 5u, result_.leaderboard.size() );
+            for ( std::size_t i = 0; i < max_rows; ++i )
+            {
+                const LeaderboardEntry& entry = result_.leaderboard[i];
+                const std::string name = entry.playerName.empty() ? "Player" : entry.playerName;
+                const std::string row_text =
+                    std::to_string ( static_cast<int> ( i + 1u ) ) + ". " + name
+                    + "   score: " + std::to_string ( entry.score )
+                    + "   stars: " + std::to_string ( std::clamp ( entry.stars, 0, 3 ) );
 
-            sf::Text row ( font_, row_text, 18 );
-            row.setFillColor ( sf::Color ( 224, 240, 255 ) );
-            center_text ( row, ws.y * ( 0.75f + static_cast<float> ( i ) * 0.042f ) );
-            window.draw ( row );
+                sf::Text row ( font_, row_text, 18 );
+                row.setFillColor ( sf::Color ( 224, 240, 255 ) );
+                center_text ( row, ws.y * ( 0.75f + static_cast<float> ( i ) * 0.042f ) );
+                window.draw ( row );
+            }
         }
     }
 

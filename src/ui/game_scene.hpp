@@ -89,6 +89,7 @@ private:
         std::mutex mutex;
         std::uint64_t ready_token = 0;
         std::vector<LeaderboardEntry> ready_entries;
+        LeaderboardFetchStatus ready_status = LeaderboardFetchStatus::Unavailable;
         bool ready = false;
     };
     std::shared_ptr<LeaderboardAsyncState> leaderboard_async_state_ =

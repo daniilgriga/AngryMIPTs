@@ -727,7 +727,9 @@ void GameScene::finish_level()
     const int score = snapshot_.score;
     const int stars = std::clamp ( snapshot_.stars, 0, 3 );
 
-    last_result_ = { won, score, stars, {} };
+    const bool logged_in = accounts_ && accounts_->isLoggedIn();
+    last_result_ = { won, score, stars, logged_in,
+                     LeaderboardFetchStatus::Unavailable, {} };
     leaderboard_applied_ = true;
     pending_result_token_ = 0;
 
@@ -764,7 +766,7 @@ void GameScene::finish_level()
              auth_token = std::move ( auth_token ),
              level_id, score_value, stars_value, won_value]() mutable
             {
-                std::vector<LeaderboardEntry> leaderboard;
+                LeaderboardFetchResult fetch_result;
 
                 try
                 {
@@ -788,22 +790,23 @@ void GameScene::finish_level()
                     }
 
                     Logger::info ( "GameScene: fetching leaderboard for levelId={}", level_id );
-                    // Always try to load leaderboard, including lose flow.
-                    leaderboard = client.fetchLeaderboard ( level_id );
-                    Logger::info ( "GameScene: leaderboard for levelId={} has {} entries",
-                                   level_id, leaderboard.size() );
+                    fetch_result = client.fetchLeaderboardWithStatus ( level_id );
+                    Logger::info ( "GameScene: leaderboard for levelId={} has {} entries, status={}",
+                                   level_id, fetch_result.entries.size(),
+                                   static_cast<int> ( fetch_result.status ) );
                 }
                 catch ( const std::exception& e )
                 {
                     Logger::error ( "GameScene: failed to sync leaderboard: {}", e.what() );
-                    leaderboard.clear();
+                    fetch_result = {};
                 }
 
                 std::lock_guard<std::mutex> lock ( async_state->mutex );
                 if ( token >= async_state->ready_token )
                 {
                     async_state->ready_token = token;
-                    async_state->ready_entries = std::move ( leaderboard );
+                    async_state->ready_entries = std::move ( fetch_result.entries );
+                    async_state->ready_status  = fetch_result.status;
                     async_state->ready = true;
                 }
             } ).detach();
@@ -824,14 +827,8 @@ bool GameScene::poll_result_update()
         return false;
     }
 
-    if ( leaderboard_async_state_->ready_entries.empty()
-         && last_result_.leaderboard.empty() )
-    {
-        leaderboard_applied_ = true;
-        return false;
-    }
-
-    last_result_.leaderboard = leaderboard_async_state_->ready_entries;
+    last_result_.leaderboard   = leaderboard_async_state_->ready_entries;
+    last_result_.fetch_status  = leaderboard_async_state_->ready_status;
     leaderboard_applied_ = true;
     return true;
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "data/account_service.hpp"
 #include "data/OnlineScoreClient.hpp"
 #include "scene.hpp"
 
@@ -12,6 +13,8 @@ struct LevelResult
     bool win = false;
     int score = 0;
     int stars = 0;
+    bool logged_in = false;
+    LeaderboardFetchStatus fetch_status = LeaderboardFetchStatus::Unavailable;
     std::vector<LeaderboardEntry> leaderboard;
 };
 
