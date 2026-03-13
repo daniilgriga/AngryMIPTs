@@ -10,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <cmath>
+#include <limits>
 #include <unordered_map>
 #include <unordered_set>
 #include <type_traits>
@@ -21,6 +22,7 @@ namespace
 {
 
 constexpr float kDegreesPerRadian = 57.2957795f;
+constexpr float kRadiansPerDegree = 0.0174532925f;
 constexpr float kSlingshotForkYOffsetPx = 60.0f;
 constexpr float kProjectileSleepLinearSpeedMps = 0.6f;
 constexpr float kProjectileSleepAngularSpeedRad = 1.2f;
@@ -154,6 +156,31 @@ inline int blockDestroyedScore(Material material)
     }
 
     return 20;
+}
+
+inline float computeBottomOffsetPx(const BlockData& block)
+{
+    if (block.shape == BlockShape::Circle || block.radiusPx > 0.0f)
+    {
+        return block.radiusPx;
+    }
+
+    if (block.shape == BlockShape::Triangle && block.triangleLocalVerticesPx.size() == 3)
+    {
+        const float angleRad = block.angleDeg * kRadiansPerDegree;
+        const float c = std::cos(angleRad);
+        const float s = std::sin(angleRad);
+
+        float maxY = -std::numeric_limits<float>::infinity();
+        for (const Vec2& vertex : block.triangleLocalVerticesPx)
+        {
+            const float rotatedY = vertex.x * s + vertex.y * c;
+            maxY = std::max(maxY, rotatedY);
+        }
+        return std::isfinite(maxY) ? maxY : (block.sizePx.y * 0.5f);
+    }
+
+    return block.sizePx.y * 0.5f;
 }
 
 struct StarThresholds
@@ -313,15 +340,7 @@ void PhysicsEngine::loadLevel(const LevelData& level)
     float supportBottomPx = kGroundTopYpx;
     for (const BlockData& block : level.blocks)
     {
-        float bottomPx = block.positionPx.y;
-        if (block.radiusPx > 0.0f)
-        {
-            bottomPx += block.radiusPx;
-        }
-        else
-        {
-            bottomPx += block.sizePx.y * 0.5f;
-        }
+        const float bottomPx = block.positionPx.y + computeBottomOffsetPx(block);
         supportBottomPx = std::max(supportBottomPx, bottomPx);
     }
 
@@ -1537,17 +1556,13 @@ void PhysicsEngine::createBlockBody(const BlockData& block)
     Vec2 adjustedPositionPx = block.positionPx;
     adjustedPositionPx.y += levelYOffsetPx_;
 
-    const float originalBottomPx = isCircle
-        ? block.positionPx.y + block.radiusPx
-        : block.positionPx.y + (block.sizePx.y * 0.5f);
+    const float bottomOffsetPx = computeBottomOffsetPx(block);
+    const float originalBottomPx = block.positionPx.y + bottomOffsetPx;
 
     // Force support blocks ("legs") to start exactly on the floor level.
     if (std::abs(originalBottomPx - supportBottomPx_) < 0.5f)
     {
-        const float halfHeightPx = isCircle
-            ? block.radiusPx
-            : (block.sizePx.y * 0.5f);
-        adjustedPositionPx.y = groundTopYpx_ - halfHeightPx;
+        adjustedPositionPx.y = groundTopYpx_ - bottomOffsetPx;
     }
     const WorldVec2 blockPosWorld = pxToWorld(adjustedPositionPx);
     bodyDef.position = b2Vec2{blockPosWorld.x, blockPosWorld.y};
