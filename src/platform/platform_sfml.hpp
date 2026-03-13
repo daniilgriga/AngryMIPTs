@@ -13,11 +13,12 @@ namespace platform
 {
 
 // ── Geometry ────────────────────────────────────────────────
-using Vec2f    = sf::Vector2f;
-using Vec2u    = sf::Vector2u;
-using Vec2i    = sf::Vector2i;
-using Rect     = sf::FloatRect;
-using Color    = sf::Color;
+using Vec2f     = sf::Vector2f;
+using Vec2u     = sf::Vector2u;
+using Vec2i     = sf::Vector2i;
+using Rect      = sf::FloatRect;
+using FloatRect = sf::FloatRect;
+using Color     = sf::Color;
 using Transform = sf::Transform;
 
 // ── Window / rendering ──────────────────────────────────────

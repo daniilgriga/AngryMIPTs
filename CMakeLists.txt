@@ -13,7 +13,7 @@ endif()
 include(FetchContent)
 
 if(EMSCRIPTEN)
-    # ── Web build: Raylib (replaces SFML) ───────────────────
+    # Web build: Raylib (replaces SFML)
     FetchContent_Declare(
         raylib
         GIT_REPOSITORY https://github.com/raysan5/raylib.git
@@ -23,7 +23,7 @@ if(EMSCRIPTEN)
     set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(raylib)
 else()
-    # ── Native build: SFML + cpr ─────────────────────────────
+    # Native build: SFML + cpr
     find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
 
     FetchContent_Declare(

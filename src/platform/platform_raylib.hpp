@@ -18,7 +18,17 @@ namespace platform
 
 // ── Geometry ────────────────────────────────────────────────
 
-struct Vec2f { float x = 0, y = 0; };
+struct Vec2f
+{
+    float x = 0, y = 0;
+    Vec2f() = default;
+    Vec2f( float x, float y ) : x(x), y(y) {}
+    Vec2f  operator+( Vec2f o ) const { return { x + o.x, y + o.y }; }
+    Vec2f  operator-( Vec2f o ) const { return { x - o.x, y - o.y }; }
+    Vec2f  operator*( float s ) const { return { x * s,   y * s   }; }
+    Vec2f& operator+=( Vec2f o ) { x += o.x; y += o.y; return *this; }
+    Vec2f& operator-=( Vec2f o ) { x -= o.x; y -= o.y; return *this; }
+};
 struct Vec2u { unsigned x = 0, y = 0; };
 struct Vec2i { int x = 0, y = 0; };
 
@@ -36,6 +46,7 @@ struct Rect
             && p.y >= top  && p.y < top  + height;
     }
 };
+using FloatRect = Rect;
 
 struct Transform
 {
@@ -411,6 +422,16 @@ struct RenderTexture
     }
     void display() { EndTextureMode(); }
     const Texture& getTexture() const { return color_tex; }
+};
+
+// ── Shader stub (no-op on web) ───────────────────────────────
+
+struct Shader
+{
+    bool loaded = false;
+    bool loadFromMemory( const char* /*frag*/, int /*type*/ ) { return false; }
+    void setUniform( const char* /*name*/, float /*v*/ )      {}
+    void setUniform( const char* /*name*/, int /*v*/ )        {}
 };
 
 // ── Audio ────────────────────────────────────────────────────

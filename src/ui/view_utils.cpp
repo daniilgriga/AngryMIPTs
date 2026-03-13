@@ -5,7 +5,7 @@
 namespace angry
 {
 
-void apply_letterbox_view ( sf::View& view, sf::Vector2u window_size )
+void apply_letterbox_view ( platform::View& view, platform::Vec2u window_size )
 {
     if ( window_size.x == 0 || window_size.y == 0 )
         return;
@@ -13,6 +13,7 @@ void apply_letterbox_view ( sf::View& view, sf::Vector2u window_size )
     const float window_aspect =
         static_cast<float> ( window_size.x ) / static_cast<float> ( window_size.y );
 
+#ifndef __EMSCRIPTEN__
     if ( window_aspect > world::kAspect )
     {
         const float width = world::kAspect / window_aspect;
@@ -29,6 +30,11 @@ void apply_letterbox_view ( sf::View& view, sf::Vector2u window_size )
     {
         view.setViewport ( sf::FloatRect ( {0.f, 0.f}, {1.f, 1.f} ) );
     }
+#else
+    // On web, View is just a logical rect — letterbox is handled by Raylib camera/scissor
+    (void)view;
+    (void)window_aspect;
+#endif
 }
 
 }  // namespace angry

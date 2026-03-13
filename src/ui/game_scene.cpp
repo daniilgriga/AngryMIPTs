@@ -28,6 +28,7 @@ constexpr std::size_t kMaxQueuedEvents = 1200u;
 constexpr int kMinEventsPerFrame = 28;
 constexpr int kMaxEventsPerFrame = 110;
 
+#ifndef __EMSCRIPTEN__
 constexpr auto kPostFxFragmentShader = R"GLSL(
 uniform sampler2D texture;
 uniform float uTime;
@@ -88,6 +89,7 @@ void main()
     gl_FragColor = vec4(sum, 1.0);
 }
 )GLSL";
+#endif  // !__EMSCRIPTEN__
 
 float strong_impact_factor ( float impulse )
 {
@@ -144,81 +146,81 @@ std::string resolveLevelPath ( int levelId )
     return resolveProjectPath ( candidates.front() );
 }
 
-sf::Color projectile_trail_color ( ProjectileType type )
+platform::Color projectile_trail_color ( ProjectileType type )
 {
     switch ( type )
     {
     case ProjectileType::Dasher:
-        return sf::Color ( 255, 210, 132, 172 );
+        return platform::Color ( 255, 210, 132, 172 );
     case ProjectileType::Bomber:
-        return sf::Color ( 255, 178, 102, 180 );
+        return platform::Color ( 255, 178, 102, 180 );
     case ProjectileType::Dropper:
-        return sf::Color ( 166, 236, 208, 170 );
+        return platform::Color ( 166, 236, 208, 170 );
     case ProjectileType::Boomerang:
-        return sf::Color ( 220, 244, 160, 168 );
+        return platform::Color ( 220, 244, 160, 168 );
     case ProjectileType::Bubbler:
-        return sf::Color ( 176, 234, 255, 175 );
+        return platform::Color ( 176, 234, 255, 175 );
     case ProjectileType::Inflater:
-        return sf::Color ( 255, 194, 224, 176 );
+        return platform::Color ( 255, 194, 224, 176 );
     case ProjectileType::Heavy:
-        return sf::Color ( 186, 145, 240, 170 );
+        return platform::Color ( 186, 145, 240, 170 );
     case ProjectileType::Splitter:
-        return sf::Color ( 148, 220, 255, 170 );
+        return platform::Color ( 148, 220, 255, 170 );
     case ProjectileType::Standard:
     default:
-        return sf::Color ( 255, 165, 136, 165 );
+        return platform::Color ( 255, 165, 136, 165 );
     }
 }
 
-sf::Color ability_core_color ( ProjectileType type )
+platform::Color ability_core_color ( ProjectileType type )
 {
     switch ( type )
     {
     case ProjectileType::Bomber:
-        return sf::Color ( 255, 206, 132 );
+        return platform::Color ( 255, 206, 132 );
     case ProjectileType::Dropper:
-        return sf::Color ( 214, 255, 236 );
+        return platform::Color ( 214, 255, 236 );
     case ProjectileType::Dasher:
-        return sf::Color ( 255, 220, 160 );
+        return platform::Color ( 255, 220, 160 );
     case ProjectileType::Boomerang:
-        return sf::Color ( 236, 255, 178 );
+        return platform::Color ( 236, 255, 178 );
     case ProjectileType::Bubbler:
-        return sf::Color ( 214, 248, 255 );
+        return platform::Color ( 214, 248, 255 );
     case ProjectileType::Inflater:
-        return sf::Color ( 255, 220, 238 );
+        return platform::Color ( 255, 220, 238 );
     case ProjectileType::Heavy:
-        return sf::Color ( 196, 146, 255 );
+        return platform::Color ( 196, 146, 255 );
     case ProjectileType::Splitter:
-        return sf::Color ( 216, 246, 255 );
+        return platform::Color ( 216, 246, 255 );
     case ProjectileType::Standard:
     default:
-        return sf::Color ( 255, 190, 150 );
+        return platform::Color ( 255, 190, 150 );
     }
 }
 
-sf::Color ability_glow_color ( ProjectileType type )
+platform::Color ability_glow_color ( ProjectileType type )
 {
     switch ( type )
     {
     case ProjectileType::Bomber:
-        return sf::Color ( 255, 148, 76, 228 );
+        return platform::Color ( 255, 148, 76, 228 );
     case ProjectileType::Dropper:
-        return sf::Color ( 78, 196, 162, 220 );
+        return platform::Color ( 78, 196, 162, 220 );
     case ProjectileType::Dasher:
-        return sf::Color ( 248, 162, 70, 220 );
+        return platform::Color ( 248, 162, 70, 220 );
     case ProjectileType::Boomerang:
-        return sf::Color ( 170, 214, 86, 220 );
+        return platform::Color ( 170, 214, 86, 220 );
     case ProjectileType::Bubbler:
-        return sf::Color ( 98, 194, 240, 220 );
+        return platform::Color ( 98, 194, 240, 220 );
     case ProjectileType::Inflater:
-        return sf::Color ( 232, 120, 176, 220 );
+        return platform::Color ( 232, 120, 176, 220 );
     case ProjectileType::Heavy:
-        return sf::Color ( 112, 76, 196, 220 );
+        return platform::Color ( 112, 76, 196, 220 );
     case ProjectileType::Splitter:
-        return sf::Color ( 126, 214, 255, 220 );
+        return platform::Color ( 126, 214, 255, 220 );
     case ProjectileType::Standard:
     default:
-        return sf::Color ( 255, 170, 120, 210 );
+        return platform::Color ( 255, 170, 120, 210 );
     }
 }
 
@@ -375,9 +377,9 @@ AbilityVfxProfile ability_vfx_profile ( ProjectileType type )
 
 struct MaterialVfxProfile
 {
-    sf::Color sparkColor;
-    sf::Color dustColor;
-    sf::Color shardColor;
+    platform::Color sparkColor;
+    platform::Color dustColor;
+    platform::Color shardColor;
     float impulseToCount;
     float hitSpeedScale;
     int minHitCount;
@@ -395,9 +397,9 @@ struct MaterialVfxProfile
 const MaterialVfxProfile& vfx_profile ( Material material )
 {
     static const MaterialVfxProfile wood {
-        sf::Color ( 230, 170, 90 ),
-        sf::Color ( 170, 120, 74, 180 ),
-        sf::Color ( 190, 130, 78 ),
+        platform::Color ( 230, 170, 90 ),
+        platform::Color ( 170, 120, 74, 180 ),
+        platform::Color ( 190, 130, 78 ),
         1.7f,
         26.f,
         4,
@@ -413,9 +415,9 @@ const MaterialVfxProfile& vfx_profile ( Material material )
     };
 
     static const MaterialVfxProfile stone {
-        sf::Color ( 214, 214, 220 ),
-        sf::Color ( 145, 150, 160, 210 ),
-        sf::Color ( 172, 176, 186 ),
+        platform::Color ( 214, 214, 220 ),
+        platform::Color ( 145, 150, 160, 210 ),
+        platform::Color ( 172, 176, 186 ),
         1.3f,
         21.f,
         3,
@@ -431,9 +433,9 @@ const MaterialVfxProfile& vfx_profile ( Material material )
     };
 
     static const MaterialVfxProfile glass {
-        sf::Color ( 220, 245, 255 ),
-        sf::Color ( 170, 226, 255, 170 ),
-        sf::Color ( 204, 240, 255 ),
+        platform::Color ( 220, 245, 255 ),
+        platform::Color ( 170, 226, 255, 170 ),
+        platform::Color ( 204, 240, 255 ),
         2.2f,
         32.f,
         6,
@@ -449,9 +451,9 @@ const MaterialVfxProfile& vfx_profile ( Material material )
     };
 
     static const MaterialVfxProfile ice {
-        sf::Color ( 234, 250, 255 ),
-        sf::Color ( 178, 225, 255, 178 ),
-        sf::Color ( 214, 246, 255 ),
+        platform::Color ( 234, 250, 255 ),
+        platform::Color ( 178, 225, 255, 178 ),
+        platform::Color ( 214, 246, 255 ),
         2.0f,
         30.f,
         5,
@@ -578,16 +580,19 @@ WorldSnapshot GameScene::make_mock_snapshot()
     return snap;
 }
 
-GameScene::GameScene ( const sf::Font& font, AccountService* accounts )
+GameScene::GameScene ( const platform::Font& font, AccountService* accounts )
     : accounts_ ( accounts )
     , physics_ ( PhysicsMode::Threaded )
     , snapshot_ ( make_mock_snapshot() )
     , font_ ( font )
+#ifndef __EMSCRIPTEN__
     , hud_text_ ( font_, "", 20 )
     , perf_text_ ( font_, "", 11 )
     , game_view_ (
           sf::FloatRect ( {0.f, 0.f}, {world::kWidthPx, world::kHeightPx} ) )
+#endif
 {
+#ifndef __EMSCRIPTEN__
     hud_text_.setFillColor ( sf::Color::White );
     hud_text_.setPosition ( {20.f, 20.f} );
     perf_text_.setFillColor ( sf::Color ( 224, 240, 255, 170 ) );
@@ -625,19 +630,27 @@ GameScene::GameScene ( const sf::Font& font, AccountService* accounts )
     {
         Logger::info ( "GameScene: shaders are unavailable, using fallback rendering path" );
     }
+#else
+    hud_text_.setFillColor ( platform::Color ( 255, 255, 255 ) );
+    hud_text_.setPosition ( {20.f, 20.f} );
+    perf_text_.setFillColor ( platform::Color ( 224, 240, 255, 170 ) );
+#endif
 }
 
 void GameScene::notify_window_recreated()
 {
     render_targets_dirty_ = true;
+#ifndef __EMSCRIPTEN__
     world_pass_ = sf::RenderTexture();
     bloom_extract_pass_ = sf::RenderTexture();
     bloom_ping_pass_ = sf::RenderTexture();
     bloom_pong_pass_ = sf::RenderTexture();
+#endif
 }
 
-void GameScene::rebuild_render_targets ( sf::Vector2u size )
+void GameScene::rebuild_render_targets ( platform::Vec2u size )
 {
+#ifndef __EMSCRIPTEN__
     if ( size.x == 0 || size.y == 0 )
         return;
 
@@ -672,6 +685,10 @@ void GameScene::rebuild_render_targets ( sf::Vector2u size )
     }
 
     render_targets_dirty_ = false;
+#else
+    (void)size;
+    render_targets_dirty_ = false;
+#endif
 }
 
 void GameScene::load_level ( int level_id, const std::string& scores_path )
@@ -751,6 +768,7 @@ void GameScene::finish_level()
             }
         }
 
+#ifndef __EMSCRIPTEN__
         const std::uint64_t token = ++leaderboard_request_token_;
         pending_result_token_ = token;
         const std::shared_ptr<LeaderboardAsyncState> async_state = leaderboard_async_state_;
@@ -810,6 +828,10 @@ void GameScene::finish_level()
                     async_state->ready = true;
                 }
             } ).detach();
+#else
+        // Web: no threads — leaderboard stays Unavailable
+        leaderboard_applied_ = true;
+#endif
     }
 
     pending_scene_ = SceneId::Result;
@@ -820,6 +842,7 @@ bool GameScene::poll_result_update()
     if ( leaderboard_applied_ || pending_result_token_ == 0 )
         return false;
 
+#ifndef __EMSCRIPTEN__
     std::lock_guard<std::mutex> lock ( leaderboard_async_state_->mutex );
     if ( !leaderboard_async_state_->ready
          || leaderboard_async_state_->ready_token != pending_result_token_ )
@@ -831,6 +854,9 @@ bool GameScene::poll_result_update()
     last_result_.fetch_status  = leaderboard_async_state_->ready_status;
     leaderboard_applied_ = true;
     return true;
+#else
+    return false;
+#endif
 }
 
 void GameScene::process_events()
@@ -882,7 +908,7 @@ void GameScene::process_events()
                     if ( impulse < 2.2f )
                         return;
 
-                    sf::Vector2f pos ( e.contactPointPx.x, e.contactPointPx.y );
+                    platform::Vec2f pos ( e.contactPointPx.x, e.contactPointPx.y );
                     const Material impactMaterial =
                         choose_impact_material ( snapshot_, e.aId, e.bId );
                     const MaterialVfxProfile& profile = vfx_profile ( impactMaterial );
@@ -945,7 +971,7 @@ void GameScene::process_events()
                     }
                     --destroyed_vfx_budget;
 
-                    sf::Vector2f pos ( e.positionPx.x, e.positionPx.y );
+                    platform::Vec2f pos ( e.positionPx.x, e.positionPx.y );
                     const MaterialVfxProfile& profile = vfx_profile ( e.material );
                     sfx_.play_destroyed ( e.material );
 
@@ -1044,7 +1070,7 @@ void GameScene::process_events()
 
                     if ( e.material == Material::Ice )
                     {
-                        particles_.emit ( pos, 10, sf::Color ( 228, 246, 255, 175 ),
+                        particles_.emit ( pos, 10, platform::Color ( 228, 246, 255, 175 ),
                                           profile.shardSpeed * 0.54f, 0.64f,
                                           profile.shardSize * 1.25f );
                     }
@@ -1067,9 +1093,9 @@ void GameScene::process_events()
                     }
                     --ability_vfx_budget;
 
-                    const sf::Vector2f pos ( e.positionPx.x, e.positionPx.y );
-                    const sf::Color core = ability_core_color ( e.projectileType );
-                    const sf::Color glow = ability_glow_color ( e.projectileType );
+                    const platform::Vec2f pos ( e.positionPx.x, e.positionPx.y );
+                    const platform::Color core = ability_core_color ( e.projectileType );
+                    const platform::Color glow = ability_glow_color ( e.projectileType );
                     const AbilityVfxProfile cfg = ability_vfx_profile ( e.projectileType );
                     sfx_.play_ability ( e.projectileType );
 
@@ -1084,8 +1110,8 @@ void GameScene::process_events()
                                                cfg.ringSecondarySize );
                     }
 
-                    const sf::Color burstColor = cfg.burstUsesGlow ? glow : core;
-                    const sf::Color shardColor = cfg.burstUsesGlow ? core : glow;
+                    const platform::Color burstColor = cfg.burstUsesGlow ? glow : core;
+                    const platform::Color shardColor = cfg.burstUsesGlow ? core : glow;
                     particles_.emit ( pos, cfg.burstCount, burstColor, cfg.burstSpeed,
                                       cfg.burstLifetime, cfg.burstSize );
                     particles_.emit_shards ( pos, cfg.shardCount, shardColor,
@@ -1095,23 +1121,23 @@ void GameScene::process_events()
                     if ( e.projectileType == ProjectileType::Bomber )
                     {
                         particles_.emit_ring ( pos, 22, glow, 176.f, 0.34f, 6.2f );
-                        particles_.emit ( pos, 16, sf::Color ( 255, 212, 166, 188 ),
+                        particles_.emit ( pos, 16, platform::Color ( 255, 212, 166, 188 ),
                                           148.f, 0.56f, 5.2f );
-                        particles_.emit ( pos, 14, sf::Color ( 255, 244, 202, 210 ),
+                        particles_.emit ( pos, 14, platform::Color ( 255, 244, 202, 210 ),
                                           116.f, 0.20f, 4.1f );
                     }
                     else if ( e.projectileType == ProjectileType::Dropper )
                     {
-                        particles_.emit_ring ( pos + sf::Vector2f ( 0.f, 14.f ), 12, glow,
+                        particles_.emit_ring ( pos + platform::Vec2f ( 0.f, 14.f ), 12, glow,
                                                116.f, 0.26f, 3.6f );
-                        particles_.emit ( pos + sf::Vector2f ( 0.f, 16.f ), 12, core,
+                        particles_.emit ( pos + platform::Vec2f ( 0.f, 16.f ), 12, core,
                                           106.f, 0.42f, 3.9f );
-                        particles_.emit_shards ( pos + sf::Vector2f ( 0.f, 22.f ),
-                                                 14, sf::Color ( 202, 246, 224, 205 ),
+                        particles_.emit_shards ( pos + platform::Vec2f ( 0.f, 22.f ),
+                                                 14, platform::Color ( 202, 246, 224, 205 ),
                                                  146.f, 0.44f, 3.7f, 520.f );
 
                         DropperPayloadGhost ghost;
-                        ghost.position = pos + sf::Vector2f ( 0.f, 20.f );
+                        ghost.position = pos + platform::Vec2f ( 0.f, 20.f );
                         ghost.velocity = {0.f, 300.f};
                         ghost.lifetime = 0.62f;
                         ghost.radius = 9.f;
@@ -1141,7 +1167,7 @@ void GameScene::process_events()
                         {
                             BubbleFloat bf;
                             const float angle = static_cast<float> ( b ) * 2.f * 3.14159f / 8.f;
-                            bf.position = pos + sf::Vector2f ( std::cos ( angle ) * 28.f,
+                            bf.position = pos + platform::Vec2f ( std::cos ( angle ) * 28.f,
                                                                std::sin ( angle ) * 18.f );
                             bf.radius   = 8.f + static_cast<float> ( b % 3 ) * 5.f;
                             bf.lifetime = 1.0f + static_cast<float> ( b % 4 ) * 0.25f;
@@ -1174,12 +1200,14 @@ SceneId GameScene::poll_pending_scene()
     return SceneId::None;
 }
 
-SceneId GameScene::handle_input ( const sf::Event& event )
+SceneId GameScene::handle_input ( const platform::Event& event )
 {
+#ifndef __EMSCRIPTEN__
     if ( event.getIf<sf::Event::Resized>() || event.getIf<sf::Event::FocusGained>() )
     {
         render_targets_dirty_ = true;
     }
+#endif
 
     if ( pending_scene_ != SceneId::None )
     {
@@ -1188,6 +1216,7 @@ SceneId GameScene::handle_input ( const sf::Event& event )
         return next;
     }
 
+#ifndef __EMSCRIPTEN__
     if ( const auto* key = event.getIf<sf::Event::KeyPressed>() )
     {
         if ( key->code == sf::Keyboard::Key::Backspace )
@@ -1208,6 +1237,30 @@ SceneId GameScene::handle_input ( const sf::Event& event )
         if ( cmd.has_value() )
             command_queue_.push ( *cmd );
     }
+#else
+    if ( const auto* key = std::get_if<platform::KeyEvent> ( &event ) )
+    {
+        if ( key->pressed )
+        {
+            if ( key->code == KEY_BACKSPACE )
+                return SceneId::Menu;
+
+            if ( key->code == KEY_SPACE )
+                command_queue_.push ( ActivateAbilityCmd{INVALID_ID} );
+
+            if ( key->code == KEY_F3 )
+                show_perf_overlay_ = !show_perf_overlay_;
+        }
+    }
+
+    if ( snapshot_.status == LevelStatus::Running && window_ptr_ )
+    {
+        auto cmd = slingshot_.handle_input ( event, snapshot_.slingshot, *window_ptr_,
+                                             game_view_ );
+        if ( cmd.has_value() )
+            command_queue_.push ( *cmd );
+    }
+#endif
 
     return SceneId::None;
 }
@@ -1326,51 +1379,51 @@ void GameScene::update()
             if ( obj.projectileType == ProjectileType::Heavy && obj.radiusPx > 0.f )
             {
                 // Massive shockwave aura — heavy plows through air leaving a dense purple wake
-                static sf::Clock heavy_idle_clock;
+                static platform::Clock heavy_idle_clock;
                 const float t     = heavy_idle_clock.getElapsedTime().asSeconds();
                 const float pulse = 0.5f + 0.5f * std::sin ( t * 8.f );
-                const sf::Vector2f pos { obj.positionPx.x, obj.positionPx.y };
+                const platform::Vec2f pos { obj.positionPx.x, obj.positionPx.y };
                 particles_.emit ( pos, low_vfx ? 2 : 3,
-                                  sf::Color ( 148, 90, 220,
+                                  platform::Color ( 148, 90, 220,
                                               static_cast<uint8_t> ( 140.f + pulse * 50.f ) ),
                                   60.f + pulse * 30.f, 0.28f, 5.2f );
                 particles_.emit ( pos, low_vfx ? 1 : 2,
-                                  sf::Color ( 200, 160, 255,
+                                  platform::Color ( 200, 160, 255,
                                               static_cast<uint8_t> ( 90.f + pulse * 40.f ) ),
                                   40.f, 0.18f, 3.8f );
             }
             else if ( obj.projectileType == ProjectileType::Bomber && obj.radiusPx > 0.f )
             {
-                static sf::Clock bomber_idle_clock;
+                static platform::Clock bomber_idle_clock;
                 const float t = bomber_idle_clock.getElapsedTime().asSeconds();
                 const float pulse = 0.5f + 0.5f * std::sin ( t * 14.f + obj.positionPx.x * 0.01f );
                 const float fuse_angle = ( obj.angleDeg - 52.f ) * kPi / 180.f;
-                const sf::Vector2f fuse_tip {
+                const platform::Vec2f fuse_tip {
                     obj.positionPx.x + std::cos ( fuse_angle ) * obj.radiusPx * 0.88f,
                     obj.positionPx.y + std::sin ( fuse_angle ) * obj.radiusPx * 0.88f
                 };
 
                 particles_.emit ( fuse_tip, ( pulse > 0.72f && !low_vfx ) ? 2 : 1,
-                                  sf::Color ( 255, 202, 132, 198 ),
+                                  platform::Color ( 255, 202, 132, 198 ),
                                   52.f + pulse * 26.f, 0.16f, 2.8f );
-                particles_.emit ( fuse_tip, 1, sf::Color ( 255, 132, 82, 172 ),
+                particles_.emit ( fuse_tip, 1, platform::Color ( 255, 132, 82, 172 ),
                                   36.f + pulse * 14.f, 0.12f, 2.1f );
             }
             else if ( obj.projectileType == ProjectileType::Dropper && obj.radiusPx > 0.f )
             {
-                static sf::Clock dropper_idle_clock;
+                static platform::Clock dropper_idle_clock;
                 const float t = dropper_idle_clock.getElapsedTime().asSeconds();
                 const float pulse = 0.5f + 0.5f * std::sin ( t * 11.f + obj.positionPx.y * 0.012f );
                 const float pod_angle = ( obj.angleDeg + 90.f ) * kPi / 180.f;
-                const sf::Vector2f payload_port {
+                const platform::Vec2f payload_port {
                     obj.positionPx.x + std::cos ( pod_angle ) * obj.radiusPx * 0.72f,
                     obj.positionPx.y + std::sin ( pod_angle ) * obj.radiusPx * 0.72f
                 };
 
-                particles_.emit ( payload_port, 1, sf::Color ( 190, 248, 228, 188 ),
+                particles_.emit ( payload_port, 1, platform::Color ( 190, 248, 228, 188 ),
                                   48.f + pulse * 20.f, 0.14f, 2.5f );
-                particles_.emit ( payload_port + sf::Vector2f ( 0.f, 5.f ), 1,
-                                  sf::Color ( 98, 206, 170, 160 ),
+                particles_.emit ( payload_port + platform::Vec2f ( 0.f, 5.f ), 1,
+                                  platform::Color ( 98, 206, 170, 160 ),
                                   30.f + pulse * 12.f, 0.12f, 2.0f );
             }
             break;
@@ -1393,8 +1446,9 @@ void GameScene::update()
                           + "   [Space] Ability   [Backspace] Menu" );
 }
 
-void GameScene::render ( sf::RenderWindow& window )
+void GameScene::render ( platform::Window& window )
 {
+#ifndef __EMSCRIPTEN__
     const sf::Vector2u window_size = window.getSize();
     if ( window_size.x == 0 || window_size.y == 0 )
         return;
@@ -1670,6 +1724,30 @@ void GameScene::render ( sf::RenderWindow& window )
         } );
         window.draw ( perf_text_ );
     }
+#else
+    // Web: minimal Raylib render — draw renderer snapshot + HUD text
+    window_ptr_ = &window;
+
+    const platform::Vec2u window_size = window.getSize();
+    if ( window_size.x == 0 || window_size.y == 0 )
+        return;
+
+    if ( render_targets_dirty_ )
+        rebuild_render_targets ( window_size );
+
+    renderer_.draw_snapshot ( window, snapshot_ );
+    slingshot_.render ( window, snapshot_.slingshot,
+                        renderer_.projectile_texture ( snapshot_.slingshot.nextProjectile ) );
+    renderer_.draw_hud ( window, snapshot_, hud_text_ );
+
+    if ( show_perf_overlay_ )
+    {
+        const std::string fps_str =
+            std::to_string ( static_cast<int> ( std::round ( smoothed_fps_ ) ) ) + " fps";
+        DrawText ( fps_str.c_str(),
+                   static_cast<int> ( window_size.x ) - 60, 6, 11, WHITE );
+    }
+#endif
 }
 
 }  // namespace angry
