@@ -20,6 +20,12 @@ namespace angry
 namespace
 {
 
+#ifdef __EMSCRIPTEN__
+constexpr PhysicsMode kDefaultPhysicsMode = PhysicsMode::SingleThread;
+#else
+constexpr PhysicsMode kDefaultPhysicsMode = PhysicsMode::Threaded;
+#endif
+
 constexpr float kImpactFlashDecay = 3.0f;
 constexpr float kStrongImpactThreshold = 8.0f;
 constexpr float kStrongImpactMax = 22.0f;
@@ -582,7 +588,7 @@ WorldSnapshot GameScene::make_mock_snapshot()
 
 GameScene::GameScene ( const platform::Font& font, AccountService* accounts )
     : accounts_ ( accounts )
-    , physics_ ( PhysicsMode::Threaded )
+    , physics_ ( kDefaultPhysicsMode )
     , snapshot_ ( make_mock_snapshot() )
     , font_ ( font )
 #ifndef __EMSCRIPTEN__
