@@ -32,6 +32,13 @@ constexpr float kDamageMinSpeedMps = 1.0f;
 constexpr float kCollisionEventMinSpeedMps = 0.7f;
 constexpr float kDamageScale = 16.0f;
 constexpr float kBlockVsBlockDamageMultiplier = 0.15f;
+// Stage 0 baseline tuning for projectile impact carry-through patch.
+constexpr float kBreakCarryMinSpeedMps = 2.2f;
+constexpr float kBreakCarryRetainTangential = 0.80f;
+constexpr float kBreakCarryRetainNormal = 0.35f;
+constexpr float kBreakCarryImpulseBoostMps = 0.8f;
+constexpr float kPostBreakDampingGraceSec = 0.12f;
+constexpr float kBreakCarryMaxSpeedMps = 28.0f;
 constexpr float kFloorImpactDamageMultiplier = 0.75f;
 constexpr float kFloorContactMinNormalY = 0.75f;
 constexpr float kFloorContactBandTopPx = 30.0f;
@@ -156,6 +163,37 @@ inline int blockDestroyedScore(Material material)
     }
 
     return 20;
+}
+
+struct ProjectileImpactOutcome
+{
+    bool willBreak = false;
+    float blockDamage = 0.0f;
+    bool hasVelocityCorrection = false;
+    b2Vec2 correctedProjectileVelocity = b2Vec2{0.0f, 0.0f};
+};
+
+inline ProjectileImpactOutcome resolveProjectileImpactOutcome(
+    float baseDamage,
+    float blockHp,
+    Material blockMaterial,
+    ProjectileType projectileType,
+    b2Vec2 projectileVelocity)
+{
+    ProjectileImpactOutcome outcome;
+    outcome.blockDamage = baseDamage
+        * projectileDamageMultiplier(projectileType)
+        * materialDamageMultiplier(blockMaterial);
+    outcome.willBreak = outcome.blockDamage >= std::max(0.0f, blockHp);
+
+    // Stage 1 only: pipeline wiring. Stage 2 will compute true carry-through velocity.
+    if (outcome.willBreak)
+    {
+        outcome.hasVelocityCorrection = true;
+        outcome.correctedProjectileVelocity = projectileVelocity;
+    }
+
+    return outcome;
 }
 
 inline float computeBottomOffsetPx(const BlockData& block)
@@ -573,6 +611,16 @@ void PhysicsEngine::step(float dt)
     {
         pendingDamageById.reserve(static_cast<std::size_t>(contactEvents.hitCount));
     }
+    struct PendingProjectileVelocityCorrection
+    {
+        b2BodyId projectileBodyId = b2_nullBodyId;
+        b2Vec2 correctedVelocity = b2Vec2{0.0f, 0.0f};
+    };
+    std::vector<PendingProjectileVelocityCorrection> pendingProjectileCorrections;
+    if (contactEvents.hitCount > 0)
+    {
+        pendingProjectileCorrections.reserve(static_cast<std::size_t>(contactEvents.hitCount));
+    }
     for (int i = 0; i < contactEvents.hitCount; ++i)
     {
         const b2ContactHitEvent& hit = contactEvents.hitEvents[static_cast<size_t>(i)];
@@ -663,24 +711,46 @@ void PhysicsEngine::step(float dt)
         const bool aIsDestructible = isDestructibleKind(bindingA->kind) && bindingA->isDestructible;
         const bool bIsDestructible = isDestructibleKind(bindingB->kind) && bindingB->isDestructible;
 
-        auto applyScaledDamage = [&pendingDamageById](const BodyBinding* binding, float damage)
-        {
-            const float scaledDamage = damage * materialDamageMultiplier(binding->material);
-            pendingDamageById[binding->id] += scaledDamage;
-        };
-
         if (aIsProjectile && bIsDestructible)
         {
-            applyScaledDamage(
-                bindingB,
-                baseDamage * projectileDamageMultiplier(bindingA->projectileType));
+            const b2Vec2 projectileVelocity = b2Body_IsValid(bindingA->bodyId)
+                ? b2Body_GetLinearVelocity(bindingA->bodyId)
+                : b2Vec2{0.0f, 0.0f};
+            const ProjectileImpactOutcome outcome = resolveProjectileImpactOutcome(
+                baseDamage,
+                bindingB->hp,
+                bindingB->material,
+                bindingA->projectileType,
+                projectileVelocity);
+            pendingDamageById[bindingB->id] += outcome.blockDamage;
+            if (outcome.willBreak && outcome.hasVelocityCorrection)
+            {
+                pendingProjectileCorrections.push_back(
+                    PendingProjectileVelocityCorrection{
+                        bindingA->bodyId,
+                        outcome.correctedProjectileVelocity});
+            }
             continue;
         }
         if (bIsProjectile && aIsDestructible)
         {
-            applyScaledDamage(
-                bindingA,
-                baseDamage * projectileDamageMultiplier(bindingB->projectileType));
+            const b2Vec2 projectileVelocity = b2Body_IsValid(bindingB->bodyId)
+                ? b2Body_GetLinearVelocity(bindingB->bodyId)
+                : b2Vec2{0.0f, 0.0f};
+            const ProjectileImpactOutcome outcome = resolveProjectileImpactOutcome(
+                baseDamage,
+                bindingA->hp,
+                bindingA->material,
+                bindingB->projectileType,
+                projectileVelocity);
+            pendingDamageById[bindingA->id] += outcome.blockDamage;
+            if (outcome.willBreak && outcome.hasVelocityCorrection)
+            {
+                pendingProjectileCorrections.push_back(
+                    PendingProjectileVelocityCorrection{
+                        bindingB->bodyId,
+                        outcome.correctedProjectileVelocity});
+            }
             continue;
         }
         if (aIsProjectile && bIsProjectile)
@@ -690,8 +760,8 @@ void PhysicsEngine::step(float dt)
         if (aIsDestructible && bIsDestructible)
         {
             const float structuralDamage = baseDamage * kBlockVsBlockDamageMultiplier;
-            applyScaledDamage(bindingA, structuralDamage);
-            applyScaledDamage(bindingB, structuralDamage);
+            pendingDamageById[bindingA->id] += structuralDamage * materialDamageMultiplier(bindingA->material);
+            pendingDamageById[bindingB->id] += structuralDamage * materialDamageMultiplier(bindingB->material);
         }
     }
 
@@ -759,6 +829,14 @@ void PhysicsEngine::step(float dt)
             bodies_[i] = std::move(bodies_.back());
         }
         bodies_.pop_back();
+    }
+
+    for (const PendingProjectileVelocityCorrection& correction : pendingProjectileCorrections)
+    {
+        if (B2_IS_NON_NULL(correction.projectileBodyId) && b2Body_IsValid(correction.projectileBodyId))
+        {
+            b2Body_SetLinearVelocity(correction.projectileBodyId, correction.correctedVelocity);
+        }
     }
 
     // Apply rolling slowdown to all dynamic gameplay bodies touching surfaces.
