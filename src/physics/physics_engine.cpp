@@ -1292,7 +1292,7 @@ void PhysicsEngine::applyCommand(const Command& cmd)
                     const float speed = std::sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
                     if (speed > 0.001f)
                     {
-                        constexpr float kDasherBoostMultiplier = 1.35f;
+                        constexpr float kDasherBoostMultiplier = 1.86f;
                         b2Body_SetLinearVelocity(
                             activeProjectileBodyId_,
                             b2Vec2{velocity.x * kDasherBoostMultiplier, velocity.y * kDasherBoostMultiplier});
