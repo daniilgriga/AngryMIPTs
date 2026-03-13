@@ -249,6 +249,12 @@ LeaderboardFetchResult OnlineScoreClient::fetchLeaderboardWithStatus(int levelId
         return result;
     }
 
+    if ( data.is_null() )
+    {
+        result.status = LeaderboardFetchStatus::Empty;
+        return result;
+    }
+
     if ( !data.is_array() )
     {
         Logger::error( "OnlineScoreClient::fetchLeaderboard failed: expected JSON array." );

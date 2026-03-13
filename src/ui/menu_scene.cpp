@@ -33,10 +33,13 @@ void draw_soft_glow ( sf::RenderWindow& window, sf::Vector2f pos, float radius,
 
 }  // namespace
 
-MenuScene::MenuScene ( const sf::Font& font )
-    : font_( font )
+MenuScene::MenuScene ( const sf::Font& font, AccountService& accounts )
+    : accounts_ ( accounts )
+    , font_( font )
     , title_( font_, "AngryMipts", 64 )
     , prompt_( font_, "Press Enter to start", 24 )
+    , badge_text_( font_, "", 18 )
+    , badge_btn_( font_, "", 16 )
 {
     title_.setFillColor ( sf::Color::White );
     prompt_.setFillColor ( sf::Color ( 230, 245, 255 ) );
@@ -48,7 +51,35 @@ SceneId MenuScene::handle_input ( const sf::Event& event )
     {
         if ( key->code == sf::Keyboard::Key::Enter )
             return SceneId::LevelSelect;
+
+        if ( key->code == sf::Keyboard::Key::L )
+        {
+            if ( accounts_.isLoggedIn() )
+                accounts_.logout();
+            else
+                return SceneId::Login;
+        }
     }
+
+    if ( const auto* click = event.getIf<sf::Event::MouseButtonPressed>() )
+    {
+        if ( click->button == sf::Mouse::Button::Left )
+        {
+            const sf::Vector2f pos ( static_cast<float> ( click->position.x ),
+                                     static_cast<float> ( click->position.y ) );
+            if ( rect_prompt_.contains ( pos ) )
+                return SceneId::LevelSelect;
+
+            if ( rect_badge_btn_.contains ( pos ) )
+            {
+                if ( accounts_.isLoggedIn() )
+                    accounts_.logout();
+                else
+                    return SceneId::Login;
+            }
+        }
+    }
+
     return SceneId::None;
 }
 
@@ -120,6 +151,56 @@ void MenuScene::render( sf::RenderWindow& window )
 
     window.draw ( title_ );
     window.draw ( prompt_ );
+
+    // Cache prompt hit rect (centered, use its actual bounds)
+    {
+        const auto pb = prompt_.getGlobalBounds();
+        rect_prompt_ = sf::FloatRect ( {pb.position.x - 20.f, pb.position.y - 10.f},
+                                      {pb.size.x + 40.f, pb.size.y + 20.f} );
+    }
+
+    // --- Account badge (top-right) ---
+    const float badge_right  = window_size.x - 18.f;
+    const float badge_top    = 14.f;
+
+    const float pill_w = 280.f;
+    const float pill_h = 54.f;
+    sf::RectangleShape pill ( {pill_w, pill_h} );
+    pill.setPosition ( {badge_right - pill_w, badge_top} );
+    pill.setFillColor ( sf::Color ( 10, 18, 36, 200 ) );
+    pill.setOutlineThickness ( 1.5f );
+    pill.setOutlineColor ( sf::Color ( 80, 140, 220, 110 ) );
+    window.draw ( pill );
+
+    if ( accounts_.isLoggedIn() )
+    {
+        badge_text_.setString ( "Logged in as " + accounts_.username() );
+        badge_text_.setFillColor ( sf::Color ( 100, 220, 140 ) );
+        badge_btn_.setString ( "[L] Logout" );
+        badge_btn_.setFillColor ( sf::Color ( 255, 120, 120 ) );
+    }
+    else
+    {
+        badge_text_.setString ( "Guest mode" );
+        badge_text_.setFillColor ( sf::Color ( 200, 180, 100 ) );
+        badge_btn_.setString ( "[L] Login" );
+        badge_btn_.setFillColor ( sf::Color ( 80, 160, 255 ) );
+    }
+
+    badge_text_.setCharacterSize ( 18 );
+    auto bt_bounds = badge_text_.getLocalBounds();
+    badge_text_.setOrigin ( {bt_bounds.position.x, bt_bounds.position.y} );
+    badge_text_.setPosition ( {badge_right - pill_w + 12.f, badge_top + 6.f} );
+    window.draw ( badge_text_ );
+
+    badge_btn_.setCharacterSize ( 16 );
+    auto bb_bounds = badge_btn_.getLocalBounds();
+    badge_btn_.setOrigin ( {bb_bounds.position.x, bb_bounds.position.y} );
+    badge_btn_.setPosition ( {badge_right - pill_w + 12.f, badge_top + 30.f} );
+    window.draw ( badge_btn_ );
+
+    // Cache badge button hit rect (whole pill is clickable for the button action)
+    rect_badge_btn_ = sf::FloatRect ( {badge_right - pill_w, badge_top}, {pill_w, pill_h} );
 }
 
 }  // namespace angry
