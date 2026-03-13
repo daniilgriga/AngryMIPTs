@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-  pull_request:
   workflow_dispatch:
+  pull_request_target:
+    types: [opened, synchronize]
 
 permissions:
   contents: read
@@ -12,6 +13,7 @@ jobs:
   build-selfhosted:
     name: Build (self-hosted Linux)
     runs-on: [self-hosted, linux, x64, vps-ci]
+    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
 
     steps:
       - name: Checkout repository
