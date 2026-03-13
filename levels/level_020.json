@@ -12,7 +12,7 @@
   "slingshot": {
     "position": [
       110,
-      590
+      600
     ],
     "maxPull": 180
   },
@@ -29,7 +29,7 @@
       "shape": "triangle",
       "material": "Glass",
       "position": [
-        425,
+        555,
         565
       ],
       "angle": 0,
@@ -43,7 +43,7 @@
       "shape": "triangle",
       "material": "Wood",
       "position": [
-        245,
+        375,
         565
       ],
       "angle": 0,
@@ -57,7 +57,7 @@
       "shape": "triangle",
       "material": "Stone",
       "position": [
-        335,
+        465,
         565
       ],
       "angle": 0,
@@ -71,8 +71,8 @@
   "targets": [
     {
       "position": [
-        301,
-        569
+        410,
+        570
       ],
       "radius": 20,
       "hp": 20,
@@ -80,7 +80,7 @@
     },
     {
       "position": [
-        391,
+        499,
         569
       ],
       "radius": 20,
