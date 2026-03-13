@@ -1705,7 +1705,7 @@ b2BodyId PhysicsEngine::createProjectileBody(ProjectileType type, const Vec2& sp
     b2ShapeDef shapeDef = b2DefaultShapeDef();
     shapeDef.density = density;
     shapeDef.friction = 0.35f;
-    shapeDef.restitution = 0.22f;
+    shapeDef.restitution = 0.08f;
     shapeDef.enableHitEvents = true;
 
     b2Circle circle = {};
