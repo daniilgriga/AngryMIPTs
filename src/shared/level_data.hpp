@@ -25,6 +25,7 @@ struct BlockData
     float angleDeg;
     Material material;
     float hp;
+    std::vector<Vec2> triangleLocalVerticesPx;  // local vertices for triangle blocks (relative to center)
 };
 
 struct TargetData

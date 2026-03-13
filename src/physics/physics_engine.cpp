@@ -1606,6 +1606,7 @@ void PhysicsEngine::createBlockBody(const BlockData& block)
     binding.radiusPx = block.radiusPx;
     binding.material = block.material;
     binding.shape = block.shape;
+    binding.triangleLocalVerticesPx = block.triangleLocalVerticesPx;
     binding.hp = std::max(1.0f, block.hp);
     binding.maxHp = binding.hp;
     binding.isStatic = block.isStatic;
@@ -1820,6 +1821,7 @@ void PhysicsEngine::refreshSnapshot()
         object.material = binding.material;
         object.projectileType = binding.projectileType;
         object.shape = binding.shape;
+        object.triangleLocalVerticesPx = binding.triangleLocalVerticesPx;
         object.isStatic = binding.isStatic;
         object.hpNormalized = clampValue(binding.hp / std::max(1.0f, binding.maxHp), 0.0f, 1.0f);
 

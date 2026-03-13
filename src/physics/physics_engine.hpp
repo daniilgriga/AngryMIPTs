@@ -38,6 +38,7 @@ private:
         float radiusPx = 0.0f;
         Material material = Material::Wood;
         BlockShape shape = BlockShape::Rect;
+        std::vector<Vec2> triangleLocalVerticesPx;
         float hp = 1.0f;
         float maxHp = 1.0f;
         bool isStatic = false;

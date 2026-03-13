@@ -27,6 +27,7 @@ struct ObjectSnapshot
     bool isStatic = false;               // static blocks rendered as solid ground elements
     float hpNormalized;  // 0.0 .. 1.0
     bool isActive;
+    std::vector<Vec2> triangleLocalVerticesPx;  // local vertices for triangle blocks (relative to center)
 };
 
 struct SlingshotState
