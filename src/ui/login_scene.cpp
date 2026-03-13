@@ -293,25 +293,34 @@ void LoginScene::render ( sf::RenderWindow& window )
         window.draw ( bg );
 
         // Text content
-        std::string display = is_password ? std::string ( buf.size(), '*' ) : buf;
+        const std::string display = is_password ? std::string ( buf.size(), '*' ) : buf;
 
         // Blinking caret
         const bool caret_on = focused
             && ( static_cast<int> ( caret_clock_.getElapsedTime().asSeconds() * 2.f ) % 2 == 0 );
-        if ( caret_on )
-            display += '|';
 
-        sf::Text content ( font_, display.empty() && !caret_on
+        const bool is_placeholder = display.empty() && !focused;
+        sf::Text content ( font_, is_placeholder
                                ? ( is_password ? "Password" : "Username" )
                                : display,
                            18 );
-        const bool is_placeholder = display.empty() && !caret_on;
         content.setFillColor ( is_placeholder ? sf::Color ( 80, 110, 160 )
                                               : sf::Color ( 225, 240, 255 ) );
         const auto cb = content.getLocalBounds();
         content.setOrigin ( {cb.position.x, cb.position.y + cb.size.y / 2.f} );
         content.setPosition ( {fx + 12.f, cy_field} );
         window.draw ( content );
+
+        // Draw caret separately so text doesn't shift
+        if ( caret_on )
+        {
+            const float caret_x = fx + 12.f + ( is_placeholder ? 0.f : cb.size.x );
+            sf::RectangleShape caret ( {2.f, kFieldH * 0.6f} );
+            caret.setOrigin ( {0.f, ( kFieldH * 0.6f ) * 0.5f} );
+            caret.setPosition ( {caret_x, cy_field} );
+            caret.setFillColor ( sf::Color ( 200, 230, 255, 220 ) );
+            window.draw ( caret );
+        }
     };
 
     const float field1_y = top_y + 130.f;
