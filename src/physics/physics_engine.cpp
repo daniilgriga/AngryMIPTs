@@ -494,6 +494,13 @@ void PhysicsEngine::step(float dt)
 
     for (BodyBinding& binding : bodies_)
     {
+        if (binding.kind == ObjectSnapshot::Kind::Projectile && binding.postBreakDampingGraceSec > 0.0f)
+        {
+            binding.postBreakDampingGraceSec = std::max(
+                0.0f,
+                binding.postBreakDampingGraceSec - clampedDt);
+        }
+
         if (!binding.isBubbled)
         {
             continue;
@@ -674,6 +681,7 @@ void PhysicsEngine::step(float dt)
     {
         b2BodyId projectileBodyId = b2_nullBodyId;
         b2Vec2 correctedVelocity = b2Vec2{0.0f, 0.0f};
+        bool applyDampingGrace = false;
     };
     std::vector<PendingProjectileVelocityCorrection> pendingProjectileCorrections;
     if (contactEvents.hitCount > 0)
@@ -788,7 +796,8 @@ void PhysicsEngine::step(float dt)
                 pendingProjectileCorrections.push_back(
                     PendingProjectileVelocityCorrection{
                         bindingA->bodyId,
-                        outcome.correctedProjectileVelocity});
+                        outcome.correctedProjectileVelocity,
+                        true});
             }
             continue;
         }
@@ -810,7 +819,8 @@ void PhysicsEngine::step(float dt)
                 pendingProjectileCorrections.push_back(
                     PendingProjectileVelocityCorrection{
                         bindingB->bodyId,
-                        outcome.correctedProjectileVelocity});
+                        outcome.correctedProjectileVelocity,
+                        true});
             }
             continue;
         }
@@ -897,6 +907,17 @@ void PhysicsEngine::step(float dt)
         if (B2_IS_NON_NULL(correction.projectileBodyId) && b2Body_IsValid(correction.projectileBodyId))
         {
             b2Body_SetLinearVelocity(correction.projectileBodyId, correction.correctedVelocity);
+
+            if (correction.applyDampingGrace)
+            {
+                BodyBinding* projectile = findBinding(correction.projectileBodyId);
+                if (projectile != nullptr && projectile->kind == ObjectSnapshot::Kind::Projectile)
+                {
+                    projectile->postBreakDampingGraceSec = std::max(
+                        projectile->postBreakDampingGraceSec,
+                        kPostBreakDampingGraceSec);
+                }
+            }
         }
     }
 
@@ -935,7 +956,14 @@ void PhysicsEngine::step(float dt)
 
         if (binding.kind == ObjectSnapshot::Kind::Projectile)
         {
-            applySurfaceDamping(binding.bodyId, 0.97f, 0.97f);
+            if (binding.postBreakDampingGraceSec > 0.0f)
+            {
+                applySurfaceDamping(binding.bodyId, 0.992f, 0.992f);
+            }
+            else
+            {
+                applySurfaceDamping(binding.bodyId, 0.97f, 0.97f);
+            }
         }
         else
         {
