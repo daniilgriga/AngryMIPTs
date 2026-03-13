@@ -18,10 +18,11 @@ struct BlockData
 {
     Vec2 positionPx;
     Vec2 sizePx;
-    float radiusPx;  // >0 only for circle blocks
+    float radiusPx;                             // >0 only for circle blocks
+    std::vector<Vec2> triangleLocalVerticesPx;  // triangle-only local vertices relative to center
     BlockShape shape = BlockShape::Rect;
-    bool isStatic = false;         // completely immovable in physics
-    bool isIndestructible = false; // ignores damage and never breaks
+    bool isStatic = false;          // completely immovable in physics
+    bool isIndestructible = false;  // ignores damage and never breaks
     float angleDeg;
     Material material;
     float hp;

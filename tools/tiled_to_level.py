@@ -11,6 +11,7 @@ from pathlib import Path
 DEFAULT_STAR_THRESHOLDS = [1000, 2500, 4000]
 DEFAULT_TOTAL_SHOTS = 4
 DEFAULT_MAX_PULL = 120
+TRIANGLE_MIN_TWICE_AREA = 1e-3
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -162,10 +163,10 @@ def normalize_block_shape(value: object, has_polygon: bool) -> str:
     return "rect"
 
 
-def polygon_bounds(obj: dict) -> tuple[float, float, float, float] | None:
+def polygon_points(obj: dict) -> list[tuple[float, float]]:
     polygon = obj.get("polygon")
     if not isinstance(polygon, list) or len(polygon) < 3:
-        return None
+        return []
 
     points: list[tuple[float, float]] = []
     for point in polygon:
@@ -178,11 +179,30 @@ def polygon_bounds(obj: dict) -> tuple[float, float, float, float] | None:
         points.append((float(px), float(py)))
 
     if len(points) < 3:
+        return []
+
+    return points
+
+
+def polygon_bounds(points: list[tuple[float, float]]) -> tuple[float, float, float, float] | None:
+    if len(points) < 3:
         return None
 
     xs = [p[0] for p in points]
     ys = [p[1] for p in points]
     return min(xs), max(xs), min(ys), max(ys)
+
+
+def triangle_twice_area(points: list[tuple[float, float]]) -> float:
+    if len(points) != 3:
+        return 0.0
+
+    area2 = 0.0
+    for idx in range(3):
+        x1, y1 = points[idx]
+        x2, y2 = points[(idx + 1) % 3]
+        area2 += x1 * y2 - x2 * y1
+    return area2
 
 
 def normalize_projectile_type(value: object) -> str:
@@ -265,20 +285,25 @@ def merge_properties(template_data: dict[str, object], obj: dict) -> dict[str, o
 
 def build_block(obj: dict, template_data: dict[str, object]) -> dict[str, object]:
     properties = merge_properties(template_data, obj)
-    has_polygon = polygon_bounds(obj) is not None
+    points = polygon_points(obj)
+    has_polygon = len(points) >= 3
     shape = normalize_block_shape(properties.get("shape"), has_polygon)
     width = float(obj.get("width", template_data.get("width", 0.0)) or 0.0)
     height = float(obj.get("height", template_data.get("height", 0.0)) or 0.0)
 
-    polygon_bbox = polygon_bounds(obj)
+    polygon_bbox = polygon_bounds(points)
+    local_center_x = width / 2.0
+    local_center_y = height / 2.0
     if polygon_bbox is not None:
         min_x, max_x, min_y, max_y = polygon_bbox
         if width <= 0.0:
             width = max_x - min_x
         if height <= 0.0:
             height = max_y - min_y
+        local_center_x = (min_x + max_x) / 2.0
+        local_center_y = (min_y + max_y) / 2.0
         position = to_center_position_with_local_center(
-            obj, (min_x + max_x) / 2.0, (min_y + max_y) / 2.0
+            obj, local_center_x, local_center_y
         )
     else:
         position = to_center_position(obj, width, height)
@@ -315,6 +340,28 @@ def build_block(obj: dict, template_data: dict[str, object]) -> dict[str, object
         block["radius"] = int(round(radius_source / 2.0))
     else:
         block["size"] = [int(round(width)), int(round(height))]
+
+    if shape == "triangle" and polygon_bbox is not None:
+        if len(points) != 3:
+            raise ValueError(
+                f"Triangle block object {obj.get('id')} must contain exactly 3 polygon points."
+            )
+
+        area2 = triangle_twice_area(points)
+        if abs(area2) <= TRIANGLE_MIN_TWICE_AREA:
+            raise ValueError(
+                f"Triangle block object {obj.get('id')} is degenerate (zero area polygon)."
+            )
+
+        local_vertices: list[list[float]] = []
+        for point_x, point_y in points:
+            local_vertices.append(
+                [
+                    round(point_x - local_center_x, 3),
+                    round(point_y - local_center_y, 3),
+                ]
+            )
+        block["vertices"] = local_vertices
 
     return block
 
@@ -362,6 +409,16 @@ def block_aabb(block: dict[str, object]) -> tuple[float, float, float, float]:
     if block["shape"] == "circle":
         r = float(block["radius"])
         return cx - r, cx + r, cy - r, cy + r
+    if block["shape"] == "triangle" and isinstance(block.get("vertices"), list):
+        xs: list[float] = []
+        ys: list[float] = []
+        for point in block["vertices"]:
+            if not isinstance(point, list) or len(point) != 2:
+                continue
+            xs.append(cx + float(point[0]))
+            ys.append(cy + float(point[1]))
+        if len(xs) == 3 and len(ys) == 3:
+            return min(xs), max(xs), min(ys), max(ys)
     w = float(block["size"][0])
     h = float(block["size"][1])
     return cx - w / 2.0, cx + w / 2.0, cy - h / 2.0, cy + h / 2.0
