@@ -185,6 +185,10 @@ inline ProjectileImpactOutcome resolveProjectileImpactOutcome(
     outcome.blockDamage = baseDamage
         * projectileDamageMultiplier(projectileType)
         * materialDamageMultiplier(blockMaterial);
+    if (!std::isfinite(outcome.blockDamage) || outcome.blockDamage < 0.0f)
+    {
+        outcome.blockDamage = 0.0f;
+    }
     outcome.willBreak = outcome.blockDamage >= std::max(0.0f, blockHp);
 
     if (outcome.willBreak)
@@ -192,7 +196,7 @@ inline ProjectileImpactOutcome resolveProjectileImpactOutcome(
         const float speed = std::sqrt(
             projectileVelocity.x * projectileVelocity.x
             + projectileVelocity.y * projectileVelocity.y);
-        if (speed > 0.0001f)
+        if (std::isfinite(speed) && speed > 0.0001f)
         {
             // Build safe contact normal and decompose velocity.
             float nx = projectileToBlockNormal.x;
@@ -247,8 +251,11 @@ inline ProjectileImpactOutcome resolveProjectileImpactOutcome(
                 correctedVelocity.y *= scale;
             }
 
-            outcome.hasVelocityCorrection = true;
-            outcome.correctedProjectileVelocity = correctedVelocity;
+            if (std::isfinite(correctedVelocity.x) && std::isfinite(correctedVelocity.y))
+            {
+                outcome.hasVelocityCorrection = true;
+                outcome.correctedProjectileVelocity = correctedVelocity;
+            }
         }
     }
 
@@ -683,10 +690,10 @@ void PhysicsEngine::step(float dt)
         b2Vec2 correctedVelocity = b2Vec2{0.0f, 0.0f};
         bool applyDampingGrace = false;
     };
-    std::vector<PendingProjectileVelocityCorrection> pendingProjectileCorrections;
+    std::unordered_map<std::uint64_t, PendingProjectileVelocityCorrection> pendingProjectileCorrectionsByBody;
     if (contactEvents.hitCount > 0)
     {
-        pendingProjectileCorrections.reserve(static_cast<std::size_t>(contactEvents.hitCount));
+        pendingProjectileCorrectionsByBody.reserve(static_cast<std::size_t>(contactEvents.hitCount));
     }
     for (int i = 0; i < contactEvents.hitCount; ++i)
     {
@@ -793,11 +800,29 @@ void PhysicsEngine::step(float dt)
             pendingDamageById[bindingB->id] += outcome.blockDamage;
             if (outcome.willBreak && outcome.hasVelocityCorrection)
             {
-                pendingProjectileCorrections.push_back(
-                    PendingProjectileVelocityCorrection{
-                        bindingA->bodyId,
-                        outcome.correctedProjectileVelocity,
-                        true});
+                const std::uint64_t key = bodyIdKey(bindingA->bodyId);
+                PendingProjectileVelocityCorrection candidate{
+                    bindingA->bodyId,
+                    outcome.correctedProjectileVelocity,
+                    true};
+                const auto [it, inserted] = pendingProjectileCorrectionsByBody.emplace(key, candidate);
+                if (!inserted)
+                {
+                    const float prevSpeed2 =
+                        it->second.correctedVelocity.x * it->second.correctedVelocity.x
+                        + it->second.correctedVelocity.y * it->second.correctedVelocity.y;
+                    const float newSpeed2 =
+                        candidate.correctedVelocity.x * candidate.correctedVelocity.x
+                        + candidate.correctedVelocity.y * candidate.correctedVelocity.y;
+                    if (newSpeed2 > prevSpeed2)
+                    {
+                        it->second = candidate;
+                    }
+                    else
+                    {
+                        it->second.applyDampingGrace = it->second.applyDampingGrace || candidate.applyDampingGrace;
+                    }
+                }
             }
             continue;
         }
@@ -816,11 +841,29 @@ void PhysicsEngine::step(float dt)
             pendingDamageById[bindingA->id] += outcome.blockDamage;
             if (outcome.willBreak && outcome.hasVelocityCorrection)
             {
-                pendingProjectileCorrections.push_back(
-                    PendingProjectileVelocityCorrection{
-                        bindingB->bodyId,
-                        outcome.correctedProjectileVelocity,
-                        true});
+                const std::uint64_t key = bodyIdKey(bindingB->bodyId);
+                PendingProjectileVelocityCorrection candidate{
+                    bindingB->bodyId,
+                    outcome.correctedProjectileVelocity,
+                    true};
+                const auto [it, inserted] = pendingProjectileCorrectionsByBody.emplace(key, candidate);
+                if (!inserted)
+                {
+                    const float prevSpeed2 =
+                        it->second.correctedVelocity.x * it->second.correctedVelocity.x
+                        + it->second.correctedVelocity.y * it->second.correctedVelocity.y;
+                    const float newSpeed2 =
+                        candidate.correctedVelocity.x * candidate.correctedVelocity.x
+                        + candidate.correctedVelocity.y * candidate.correctedVelocity.y;
+                    if (newSpeed2 > prevSpeed2)
+                    {
+                        it->second = candidate;
+                    }
+                    else
+                    {
+                        it->second.applyDampingGrace = it->second.applyDampingGrace || candidate.applyDampingGrace;
+                    }
+                }
             }
             continue;
         }
@@ -902,11 +945,26 @@ void PhysicsEngine::step(float dt)
         bodies_.pop_back();
     }
 
-    for (const PendingProjectileVelocityCorrection& correction : pendingProjectileCorrections)
+    for (const auto& item : pendingProjectileCorrectionsByBody)
     {
+        const PendingProjectileVelocityCorrection& correction = item.second;
         if (B2_IS_NON_NULL(correction.projectileBodyId) && b2Body_IsValid(correction.projectileBodyId))
         {
-            b2Body_SetLinearVelocity(correction.projectileBodyId, correction.correctedVelocity);
+            b2Vec2 correctedVelocity = correction.correctedVelocity;
+            const float correctedSpeed = std::sqrt(
+                correctedVelocity.x * correctedVelocity.x
+                + correctedVelocity.y * correctedVelocity.y);
+            if (!std::isfinite(correctedSpeed))
+            {
+                continue;
+            }
+            if (correctedSpeed > kBreakCarryMaxSpeedMps && correctedSpeed > 0.0001f)
+            {
+                const float scale = kBreakCarryMaxSpeedMps / correctedSpeed;
+                correctedVelocity.x *= scale;
+                correctedVelocity.y *= scale;
+            }
+            b2Body_SetLinearVelocity(correction.projectileBodyId, correctedVelocity);
 
             if (correction.applyDampingGrace)
             {
