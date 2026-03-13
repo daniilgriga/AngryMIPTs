@@ -109,6 +109,20 @@ SceneId ResultScene::handle_input ( const sf::Event& event )
     }
     if ( const auto* wheel = event.getIf<sf::Event::MouseWheelScrolled>() )
         lb_scroll_ = std::max ( 0.f, lb_scroll_ - wheel->delta * 36.f );
+
+    if ( const auto* click = event.getIf<sf::Event::MouseButtonPressed>() )
+    {
+        if ( click->button == sf::Mouse::Button::Left )
+        {
+            const sf::Vector2f pos ( static_cast<float> ( click->position.x ),
+                                     static_cast<float> ( click->position.y ) );
+            if ( rect_btn_retry_.contains ( pos ) )
+                return SceneId::Game;
+            if ( rect_btn_menu_.contains ( pos ) )
+                return SceneId::Menu;
+        }
+    }
+
     return SceneId::None;
 }
 
@@ -252,11 +266,42 @@ void ResultScene::render ( sf::RenderWindow& window )
     window.draw ( score_text_ );
     window.draw ( status_note_ );
 
-    // Prompt
-    prompt_.setFillColor ( sf::Color ( 230, 245, 255,
-                                       static_cast<uint8_t> ( 182.f + 70.f * pulse ) ) );
-    left_center ( prompt_, panel_top + panel_h * 0.88f );
-    window.draw ( prompt_ );
+    // Buttons: Retry + Menu
+    {
+        const float btn_y  = panel_top + panel_h * 0.88f;
+        const float btn_w  = 140.f;
+        const float btn_h  = 38.f;
+        const float btn_gap = 16.f;
+        const float retry_cx = left_cx - btn_w * 0.5f - btn_gap * 0.5f;
+        const float menu_cx  = left_cx + btn_w * 0.5f + btn_gap * 0.5f;
+
+        rect_btn_retry_ = sf::FloatRect ( {retry_cx - btn_w * 0.5f, btn_y - btn_h * 0.5f}, {btn_w, btn_h} );
+        rect_btn_menu_  = sf::FloatRect ( {menu_cx  - btn_w * 0.5f, btn_y - btn_h * 0.5f}, {btn_w, btn_h} );
+
+        auto draw_btn = [&] ( const std::string& label, float cx, sf::Color fill )
+        {
+            sf::RectangleShape btn ( {btn_w, btn_h} );
+            btn.setOrigin ( {btn_w * 0.5f, btn_h * 0.5f} );
+            btn.setPosition ( {cx, btn_y} );
+            btn.setFillColor ( fill );
+            btn.setOutlineThickness ( 1.5f );
+            btn.setOutlineColor ( sf::Color ( 255, 255, 255, 50 ) );
+            window.draw ( btn );
+
+            sf::Text lbl ( font_, label, 16 );
+            lbl.setStyle ( sf::Text::Bold );
+            lbl.setFillColor ( sf::Color ( 230, 245, 255,
+                                           static_cast<uint8_t> ( 200.f + 55.f * pulse ) ) );
+            auto b = lbl.getLocalBounds();
+            lbl.setOrigin ( {b.position.x + b.size.x / 2.f,
+                             b.position.y + b.size.y / 2.f} );
+            lbl.setPosition ( {cx, btn_y} );
+            window.draw ( lbl );
+        };
+
+        draw_btn ( "[Enter] Retry",     retry_cx, sf::Color ( 40, 120, 60, 200 ) );
+        draw_btn ( "[Bksp] Menu",       menu_cx,  sf::Color ( 60, 80, 130, 200 ) );
+    }
 
     // ── Right panel — Leaderboard ──────────────────────────────────────────
     {

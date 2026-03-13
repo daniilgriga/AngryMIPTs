@@ -157,6 +157,43 @@ SceneId LoginScene::handle_input ( const sf::Event& event )
             return SceneId::Menu;
     }
 
+    if ( const auto* click = event.getIf<sf::Event::MouseButtonPressed>() )
+    {
+        if ( click->button == sf::Mouse::Button::Left )
+        {
+            const sf::Vector2f pos ( static_cast<float> ( click->position.x ),
+                                     static_cast<float> ( click->position.y ) );
+            if ( rect_field_username_.contains ( pos ) )
+            {
+                focus_ = FocusField::Username;
+                caret_clock_.restart();
+                return SceneId::None;
+            }
+            if ( rect_field_password_.contains ( pos ) )
+            {
+                focus_ = FocusField::Password;
+                caret_clock_.restart();
+                return SceneId::None;
+            }
+            if ( rect_btn_login_.contains ( pos ) )
+            {
+                do_login();
+                if ( status_kind_ == StatusKind::Success )
+                    return SceneId::Menu;
+                return SceneId::None;
+            }
+            if ( rect_btn_register_.contains ( pos ) )
+            {
+                do_register();
+                if ( status_kind_ == StatusKind::Success )
+                    return SceneId::Menu;
+                return SceneId::None;
+            }
+            if ( rect_btn_guest_.contains ( pos ) )
+                return SceneId::Menu;
+        }
+    }
+
     if ( const auto* text = event.getIf<sf::Event::TextEntered>() )
     {
         const uint32_t ch = text->unicode;
@@ -325,6 +362,10 @@ void LoginScene::render ( sf::RenderWindow& window )
 
     const float field1_y = top_y + 130.f;
     const float field2_y = top_y + 215.f;
+    const float field_fx = card_cx - kFieldW * 0.5f;
+
+    rect_field_username_ = sf::FloatRect ( {field_fx, field1_y - kFieldH * 0.5f}, {kFieldW, kFieldH} );
+    rect_field_password_ = sf::FloatRect ( {field_fx, field2_y - kFieldH * 0.5f}, {kFieldW, kFieldH} );
 
     draw_field ( "Username", username_buf_, false, field1_y, focus_ == FocusField::Username );
     draw_field ( "Password", password_buf_, true,  field2_y, focus_ == FocusField::Password );
@@ -356,10 +397,17 @@ void LoginScene::render ( sf::RenderWindow& window )
     const float btn_h   = 42.f;
     const float gap     = 12.f;
 
-    draw_button ( "Login",    card_cx - btn_w * 0.5f - gap * 0.5f, btn_y,
+    const float btn_login_cx    = card_cx - btn_w * 0.5f - gap * 0.5f;
+    const float btn_register_cx = card_cx + btn_w * 0.5f + gap * 0.5f;
+
+    rect_btn_login_    = sf::FloatRect ( {btn_login_cx    - btn_w * 0.5f, btn_y - btn_h * 0.5f}, {btn_w, btn_h} );
+    rect_btn_register_ = sf::FloatRect ( {btn_register_cx - btn_w * 0.5f, btn_y - btn_h * 0.5f}, {btn_w, btn_h} );
+    rect_btn_guest_    = sf::FloatRect ( {card_cx - 120.f, top_y + 355.f - 12.f}, {240.f, 24.f} );
+
+    draw_button ( "Login",    btn_login_cx,    btn_y,
                   btn_w, btn_h,
                   sf::Color ( 210, 135, 30, 230 ), sf::Color::White );
-    draw_button ( "Register", card_cx + btn_w * 0.5f + gap * 0.5f, btn_y,
+    draw_button ( "Register", btn_register_cx, btn_y,
                   btn_w, btn_h,
                   sf::Color ( 30, 100, 190, 220 ), sf::Color::White );
 

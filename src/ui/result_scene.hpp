@@ -33,6 +33,9 @@ private:
     sf::Clock   star_clock_;
     float       lb_scroll_ = 0.f;   // pixels scrolled in leaderboard panel
 
+    sf::FloatRect rect_btn_retry_;
+    sf::FloatRect rect_btn_menu_;
+
 public:
     explicit ResultScene ( const sf::Font& font );
 

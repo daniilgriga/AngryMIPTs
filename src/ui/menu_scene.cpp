@@ -60,6 +60,26 @@ SceneId MenuScene::handle_input ( const sf::Event& event )
                 return SceneId::Login;
         }
     }
+
+    if ( const auto* click = event.getIf<sf::Event::MouseButtonPressed>() )
+    {
+        if ( click->button == sf::Mouse::Button::Left )
+        {
+            const sf::Vector2f pos ( static_cast<float> ( click->position.x ),
+                                     static_cast<float> ( click->position.y ) );
+            if ( rect_prompt_.contains ( pos ) )
+                return SceneId::LevelSelect;
+
+            if ( rect_badge_btn_.contains ( pos ) )
+            {
+                if ( accounts_.isLoggedIn() )
+                    accounts_.logout();
+                else
+                    return SceneId::Login;
+            }
+        }
+    }
+
     return SceneId::None;
 }
 
@@ -132,6 +152,13 @@ void MenuScene::render( sf::RenderWindow& window )
     window.draw ( title_ );
     window.draw ( prompt_ );
 
+    // Cache prompt hit rect (centered, use its actual bounds)
+    {
+        const auto pb = prompt_.getGlobalBounds();
+        rect_prompt_ = sf::FloatRect ( {pb.position.x - 20.f, pb.position.y - 10.f},
+                                      {pb.size.x + 40.f, pb.size.y + 20.f} );
+    }
+
     // --- Account badge (top-right) ---
     const float badge_right  = window_size.x - 18.f;
     const float badge_top    = 14.f;
@@ -171,6 +198,9 @@ void MenuScene::render( sf::RenderWindow& window )
     badge_btn_.setOrigin ( {bb_bounds.position.x, bb_bounds.position.y} );
     badge_btn_.setPosition ( {badge_right - pill_w + 12.f, badge_top + 30.f} );
     window.draw ( badge_btn_ );
+
+    // Cache badge button hit rect (whole pill is clickable for the button action)
+    rect_badge_btn_ = sf::FloatRect ( {badge_right - pill_w, badge_top}, {pill_w, pill_h} );
 }
 
 }  // namespace angry

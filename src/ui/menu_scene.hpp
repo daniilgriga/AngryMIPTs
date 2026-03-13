@@ -15,6 +15,9 @@ private:
     sf::Text        badge_text_;
     sf::Text        badge_btn_;
 
+    sf::FloatRect   rect_prompt_;
+    sf::FloatRect   rect_badge_btn_;
+
 public:
     MenuScene ( const sf::Font& font, AccountService& accounts );
 

@@ -203,9 +203,61 @@ SceneId LevelSelectScene::handle_input ( const sf::Event& event )
 
     if ( const auto* wheel = event.getIf<sf::Event::MouseWheelScrolled>() )
     {
-        scroll_offset_ -= wheel->delta * 52.f;
-        if ( scroll_offset_ < 0.f )
-            scroll_offset_ = 0.f;
+        const sf::Vector2f pos ( static_cast<float> ( wheel->position.x ),
+                                  static_cast<float> ( wheel->position.y ) );
+        if ( rect_right_panel_.contains ( pos ) )
+        {
+            preview_scroll_ = std::max ( 0.f, preview_scroll_ - wheel->delta * 36.f );
+        }
+        else
+        {
+            scroll_offset_ -= wheel->delta * 52.f;
+            if ( scroll_offset_ < 0.f )
+                scroll_offset_ = 0.f;
+        }
+    }
+
+    if ( const auto* click = event.getIf<sf::Event::MouseButtonPressed>() )
+    {
+        if ( click->button == sf::Mouse::Button::Left )
+        {
+            const sf::Vector2f pos ( static_cast<float> ( click->position.x ),
+                                     static_cast<float> ( click->position.y ) );
+
+            // Badge click
+            if ( rect_badge_.contains ( pos ) && accounts_ )
+            {
+                if ( accounts_->isLoggedIn() )
+                    accounts_->logout();
+                else
+                    return SceneId::Login;
+                return SceneId::None;
+            }
+
+            // Level item click — single click selects, double-click plays
+            for ( int i = 0; i < static_cast<int> ( rects_level_items_screen_.size() ); ++i )
+            {
+                if ( rects_level_items_screen_[i].contains ( pos ) )
+                {
+                    if ( i == selected_ )
+                    {
+                        // Second click on already-selected → play
+                        if ( !levels_.empty() )
+                        {
+                            selected_level_id_ = levels_[selected_].id;
+                            return SceneId::Game;
+                        }
+                    }
+                    else
+                    {
+                        selected_ = i;
+                        rebuild_texts();
+                        fetch_preview ( levels_[selected_].id );
+                    }
+                    return SceneId::None;
+                }
+            }
+        }
     }
 
     return SceneId::None;
@@ -246,6 +298,9 @@ void LevelSelectScene::render ( sf::RenderWindow& window )
     const float left_cx   = margin + left_w * 0.5f;
     const float right_x   = margin + left_w + gap;
     const float right_cx  = right_x + right_w * 0.5f;
+
+    rect_left_panel_  = sf::FloatRect ( {margin, panel_top}, {left_w, panel_h} );
+    rect_right_panel_ = sf::FloatRect ( {right_x, panel_top}, {right_w, panel_h} );
 
     // ── Left panel — level list ─────────────────────────────────────────────
     {
@@ -292,10 +347,15 @@ void LevelSelectScene::render ( sf::RenderWindow& window )
         {1.f, list_h  / ws.y} ) );
     window.setView ( list_view );
 
+    rects_level_items_screen_.resize ( level_texts_.size() );
+
     for ( int i = 0; i < static_cast<int> ( level_texts_.size() ); ++i )
     {
         const float y      = list_top + static_cast<float> ( i ) * step + step * 0.5f - scroll_offset_;
         const bool  is_sel = ( i == selected_ );
+
+        // Store screen rect for hit testing (whether visible or not)
+        rects_level_items_screen_[i] = sf::FloatRect ( {margin, y - step * 0.5f}, {left_w, step} );
 
         if ( y + step < list_top || y - step > list_bottom )
             continue;
@@ -535,6 +595,8 @@ void LevelSelectScene::render ( sf::RenderWindow& window )
     pill.setOutlineThickness ( 1.5f );
     pill.setOutlineColor ( sf::Color ( 80, 140, 220, 110 ) );
     window.draw ( pill );
+
+    rect_badge_ = sf::FloatRect ( {badge_right - pill_w, badge_top}, {pill_w, pill_h} );
 
     if ( accounts_ && accounts_->isLoggedIn() )
     {

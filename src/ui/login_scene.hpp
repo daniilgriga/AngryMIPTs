@@ -36,6 +36,13 @@ private:
     sf::Clock    status_clock_;   // time since last status set
     sf::Clock    caret_clock_;    // drives blinking caret
     sf::Clock    anim_clock_;     // background animation
+
+    // Hit-test rects updated each render() call
+    sf::FloatRect rect_field_username_;
+    sf::FloatRect rect_field_password_;
+    sf::FloatRect rect_btn_login_;
+    sf::FloatRect rect_btn_register_;
+    sf::FloatRect rect_btn_guest_;
 };
 
 }  // namespace angry

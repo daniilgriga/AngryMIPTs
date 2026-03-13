@@ -32,6 +32,12 @@ private:
     int   selected_level_id_ = -1;
     float scroll_offset_     = 0.f;
 
+    // Hit-test rects updated each render() call
+    sf::FloatRect              rect_badge_;
+    sf::FloatRect              rect_right_panel_;
+    sf::FloatRect              rect_left_panel_;
+    std::vector<sf::FloatRect> rects_level_items_screen_; // actual screen Y per item
+
     // Preview panel leaderboard — async fetch per selection
     struct PreviewState
     {
