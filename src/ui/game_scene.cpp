@@ -1,3 +1,14 @@
+// ============================================================
+// game_scene.cpp — Main gameplay scene implementation.
+// Part of: angry::ui
+//
+// Implements in-level runtime orchestration:
+//   * Processes input and sends commands to physics runtime
+//   * Renders world snapshot, HUD, particles, and overlays
+//   * Handles gameplay events, score sync, and result output
+//   * Bridges data/account services with gameplay flow
+// ============================================================
+
 #include "ui/game_scene.hpp"
 
 #include "data/logger.hpp"
