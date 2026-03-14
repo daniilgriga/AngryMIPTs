@@ -1,3 +1,20 @@
+// ============================================================
+// physics_engine.cpp — Box2D simulation core for AngryMipts.
+// Part of: angry::physics
+//
+// Implements the full physics pipeline for a single level:
+//   * Creates Box2D world, ground, walls, blocks, targets
+//   * Steps simulation with clamped dt, processes contact damage
+//   * Handles projectile launch, abilities (Splitter, Dasher,
+//     Bomber, Dropper, Boomerang, Bubbler, Inflater, Heavy)
+//   * Tracks block HP, destruction, scoring, and win/lose state
+//   * Produces immutable WorldSnapshot each frame for rendering
+//
+// All coordinates are in pixels (Px suffix) unless explicitly
+// converted to Box2D meters via pxToWorld / worldToPx helpers
+// from physics_units.hpp.
+// ============================================================
+
 #include "physics_engine.hpp"
 
 #include "physics_units.hpp"
@@ -18,6 +35,9 @@
 
 namespace angry
 {
+
+// #=# Constants & Helpers #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
+
 namespace
 {
 
@@ -378,6 +398,8 @@ inline void applySurfaceDamping(b2BodyId bodyId, float linearFactor, float angul
 
 }  // namespace
 
+// #=# Construction / Destruction #=#=#=#=#=#=#=#=#=#=#=#=#=#=#
+
 PhysicsEngine::~PhysicsEngine()
 {
     if (B2_IS_NON_NULL(worldId_))
@@ -465,6 +487,8 @@ void PhysicsEngine::loadLevel(const LevelData& level)
 
     refreshSnapshot();
 }
+
+// #=# Simulation Step #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
 void PhysicsEngine::processCommands(ThreadSafeQueue<Command>& cmdQueue)
 {
@@ -1187,6 +1211,8 @@ void PhysicsEngine::step(float dt)
     snapshot_.physicsStepMs = std::chrono::duration<float, std::milli>(end - start).count();
 }
 
+// #=# Snapshot & Events #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
+
 WorldSnapshot PhysicsEngine::getSnapshot() const
 {
     return snapshot_;
@@ -1198,6 +1224,8 @@ std::vector<Event> PhysicsEngine::drainEvents()
     out.swap(events_);
     return out;
 }
+
+// #=# Command Dispatch #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
 void PhysicsEngine::applyCommand(const Command& cmd)
 {
@@ -1709,6 +1737,8 @@ void PhysicsEngine::applyCommand(const Command& cmd)
         cmd);
 }
 
+// #=# World Geometry #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
+
 void PhysicsEngine::createGround(float topYpx)
 {
     if (B2_IS_NULL(worldId_))
@@ -1765,6 +1795,8 @@ void PhysicsEngine::createGround(float topYpx)
         0.0f);
     b2CreatePolygonShape(groundBodyId, &shapeDef, &ceiling);
 }
+
+// #=# Body Factories #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 void PhysicsEngine::createBlockBody(const BlockData& block)
 {
@@ -2018,6 +2050,8 @@ b2BodyId PhysicsEngine::createProjectileBody(ProjectileType type, const Vec2& sp
 
     return bodyId;
 }
+
+// #=# Lifecycle & Status #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 void PhysicsEngine::destroyBody(b2BodyId bodyId)
 {

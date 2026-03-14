@@ -1,3 +1,16 @@
+// ============================================================
+// physics_engine.hpp — Public interface for the Box2D physics
+//                      simulation engine.
+// Part of: angry::physics
+//
+// PhysicsEngine owns the Box2D world and all body bindings
+// for a single level. It:
+//   * Accepts Commands (load, launch, ability, pause, restart)
+//   * Steps the Box2D world and resolves contact damage
+//   * Emits Events (collision, destroy, score, level complete)
+//   * Exposes an immutable WorldSnapshot each frame
+// ============================================================
+
 #pragma once
 
 #include "../core/score_system.hpp"
@@ -15,6 +28,9 @@
 namespace angry
 {
 
+// Wraps a Box2D world for one level: creates bodies from level
+// data, steps the simulation, tracks damage and scoring, and
+// produces WorldSnapshot for thread-safe rendering.
 class PhysicsEngine
 {
 public:
