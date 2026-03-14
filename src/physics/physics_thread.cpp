@@ -51,7 +51,7 @@ void PhysicsThread::start()
 
     stop_requested_.store(false, std::memory_order_release);
     running_ = true;
-    worker_ = std::thread(&PhysicsThread::workerLoop, this);
+    worker_ = std::thread(&PhysicsThread::worker_loop, this);
 }
 
 void PhysicsThread::stop()
@@ -89,7 +89,7 @@ void PhysicsThread::register_level(const LevelData& level)
     engine_.register_level(level);
 }
 
-void PhysicsThread::loadLevel(const LevelData& level)
+void PhysicsThread::load_level(const LevelData& level)
 {
     std::lock_guard<std::mutex> lock(mutex_);
     engine_.register_level(level);
@@ -101,7 +101,7 @@ void PhysicsThread::loadLevel(const LevelData& level)
     else
     {
         engine_.load_level(level);
-        publishSnapshotLocked();
+        publish_snapshot_locked();
     }
 }
 
@@ -137,7 +137,7 @@ void PhysicsThread::tick_single_thread(float dt)
     std::lock_guard<std::mutex> lock(mutex_);
     engine_.process_commands(command_queue_);
     engine_.step(dt);
-    publishSnapshotLocked();
+    publish_snapshot_locked();
 
     std::vector<Event> events = engine_.drain_events();
     for (const Event& event : events)
@@ -167,7 +167,7 @@ std::vector<Event> PhysicsThread::drain_events()
 
 // #=# Worker Internals #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
-void PhysicsThread::workerLoop()
+void PhysicsThread::worker_loop()
 {
     using clock = std::chrono::steady_clock;
     const auto fixedDt = std::chrono::duration<double>(kFixedDtSec);
@@ -190,7 +190,7 @@ void PhysicsThread::workerLoop()
                 std::lock_guard<std::mutex> lock(mutex_);
                 engine_.process_commands(command_queue_);
                 engine_.step(kFixedDtSec);
-                publishSnapshotLocked();
+                publish_snapshot_locked();
 
                 std::vector<Event> events = engine_.drain_events();
                 for (const Event& event : events)
@@ -215,7 +215,7 @@ void PhysicsThread::workerLoop()
 
 // Publishes newly computed world state by flipping back/front
 // snapshot buffers under snapshot mutex.
-void PhysicsThread::publishSnapshotLocked()
+void PhysicsThread::publish_snapshot_locked()
 {
     std::lock_guard<std::mutex> lock(snapshot_mutex_);
     const int front = front_snapshot_index_.load(std::memory_order_relaxed);

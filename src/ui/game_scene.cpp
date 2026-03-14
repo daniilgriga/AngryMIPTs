@@ -740,7 +740,7 @@ void GameScene::load_level ( int level_id, const std::string& scores_path )
         const std::string path = resolveLevelPath ( level_id );
         const LevelData level = level_loader_.load ( path );
         physics_.register_level ( level );
-        physics_.loadLevel ( level );
+        physics_.load_level ( level );
         if ( physics_.mode() == PhysicsMode::Threaded )
         {
             // Avoid blocking main thread while worker applies LoadLevelCmd.

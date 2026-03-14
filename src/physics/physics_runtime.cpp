@@ -46,11 +46,11 @@ void PhysicsRuntime::register_level(const LevelData& level)
     single_engine_.register_level(level);
 }
 
-void PhysicsRuntime::loadLevel(const LevelData& level)
+void PhysicsRuntime::load_level(const LevelData& level)
 {
     if (mode_ == PhysicsMode::Threaded)
     {
-        threaded_engine_.loadLevel(level);
+        threaded_engine_.load_level(level);
         return;
     }
 

@@ -40,7 +40,7 @@ public:
     ~PhysicsRuntime();
 
     void register_level(const LevelData& level);
-    void loadLevel(const LevelData& level);
+    void load_level(const LevelData& level);
     void process_commands(ThreadSafeQueue<Command>& cmdQueue);
     void step(float dt);
 

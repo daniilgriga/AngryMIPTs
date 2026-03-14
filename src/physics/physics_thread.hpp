@@ -43,7 +43,7 @@ public:
     bool is_running() const;
 
     void register_level(const LevelData& level);
-    void loadLevel(const LevelData& level);
+    void load_level(const LevelData& level);
     void load_level_by_id(int levelId);
     void restart_level(int levelId);
     void set_paused(bool paused);
@@ -56,8 +56,8 @@ public:
     std::vector<Event> drain_events();
 
 private:
-    void workerLoop();
-    void publishSnapshotLocked();
+    void worker_loop();
+    void publish_snapshot_locked();
 
     static constexpr float kFixedDtSec = 1.0f / 60.0f;
 
