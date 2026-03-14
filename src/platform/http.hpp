@@ -29,6 +29,8 @@
 namespace platform::http
 {
 
+// #=# Types & Response Model #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
+
 using Header = std::pair<std::string, std::string>;
 using QueryParam = std::pair<std::string, std::string>;
 using Headers = std::vector<Header>;
@@ -44,12 +46,16 @@ struct Response
 
 using ResponseCallback = std::function<void(Response)>;
 
+// #=# Common Helpers #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
+
 inline bool is_http_ok( const Response& response )
 {
     return response.status_code >= 200 && response.status_code < 300;
 }
 
 #ifndef __EMSCRIPTEN__
+
+// #=# Native (CPR) Implementation #=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 inline Response post( const std::string& url,
                       const std::string& body,
@@ -113,6 +119,8 @@ inline Response get( const std::string& url,
     return response;
 }
 
+// #=# Native Async Adapters #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
+
 inline void post_async( const std::string& url,
                         const std::string& body,
                         const Headers& headers,
@@ -138,6 +146,8 @@ inline void get_async( const std::string& url,
 }
 
 #else
+
+// #=# Web URL/Header Helpers #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 inline std::string url_encode_component( const std::string& value )
 {
@@ -205,6 +215,8 @@ inline std::vector<const char*> flatten_headers( const Headers& headers,
     flat.push_back( nullptr );
     return flat;
 }
+
+// #=# Web Sync Fetch #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 inline Response fetch_sync( const std::string& method,
                             const std::string& url,
@@ -288,6 +300,8 @@ inline Response fetch_sync( const std::string& method,
 
     return context.response;
 }
+
+// #=# Web Async Fetch #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 struct AsyncFetchContext
 {
@@ -380,6 +394,8 @@ inline void fetch_async( const std::string& method,
         complete_async_fetch( context, std::move( response ) );
     }
 }
+
+// #=# Web Public Wrappers #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 inline Response post( const std::string& url,
                       const std::string& body,
