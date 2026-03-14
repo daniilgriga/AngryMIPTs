@@ -135,6 +135,10 @@ private:
     bool show_perf_overlay_ = true;
     float smoothed_dt_sec_ = 1.0f / 60.0f;
     float smoothed_fps_ = 60.0f;
+    ImpactOutcome last_impact_outcome_ = ImpactOutcome::Grazed;
+    float last_impact_speed_before_mps_ = 0.0f;
+    float last_impact_speed_after_mps_ = 0.0f;
+    float last_impact_age_sec_ = 999.0f;
     float vfx_load_factor_ = 1.0f;
     bool render_targets_dirty_ = true;
     bool snapshot_ready_ = false;  // false until first Running snapshot received after load

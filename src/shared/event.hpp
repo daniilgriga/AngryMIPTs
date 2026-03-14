@@ -63,7 +63,25 @@ struct AbilityActivatedEvent
     Vec2 positionPx;
 };
 
+enum class ImpactOutcome
+{
+    Blocked,
+    BrokenCarryThrough,
+    Grazed,
+};
+
+struct ImpactResolvedEvent
+{
+    EntityId projectileId;
+    EntityId blockId;
+    ImpactOutcome outcome;
+    float speedBeforeMps;
+    float speedAfterMps;
+    Vec2 contactPointPx;
+};
+
 using Event = std::variant<CollisionEvent, DestroyedEvent, TargetHitEvent, ScoreChangedEvent,
-                           LevelCompletedEvent, ProjectileReadyEvent, AbilityActivatedEvent>;
+                           LevelCompletedEvent, ProjectileReadyEvent, AbilityActivatedEvent,
+                           ImpactResolvedEvent>;
 
 }  // namespace angry

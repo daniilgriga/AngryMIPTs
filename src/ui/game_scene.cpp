@@ -119,6 +119,45 @@ float strong_impact_factor ( float impulse )
         0.f, 1.f );
 }
 
+const char* impact_outcome_label ( ImpactOutcome outcome )
+{
+    switch ( outcome )
+    {
+    case ImpactOutcome::Blocked:
+        return "Blocked";
+    case ImpactOutcome::BrokenCarryThrough:
+        return "BrokenCarryThrough";
+    case ImpactOutcome::Grazed:
+    default:
+        return "Grazed";
+    }
+}
+
+platform::Color impact_outcome_color ( ImpactOutcome outcome )
+{
+    switch ( outcome )
+    {
+    case ImpactOutcome::Blocked:
+        return platform::Color ( 255, 184, 142, 210 );
+    case ImpactOutcome::BrokenCarryThrough:
+        return platform::Color ( 182, 255, 222, 224 );
+    case ImpactOutcome::Grazed:
+    default:
+        return platform::Color ( 196, 214, 255, 188 );
+    }
+}
+
+std::string make_impact_debug_line ( ImpactOutcome outcome,
+                                     float speed_before_mps,
+                                     float speed_after_mps )
+{
+    std::ostringstream out;
+    out << impact_outcome_label ( outcome )
+        << "  " << std::fixed << std::setprecision ( 1 )
+        << speed_before_mps << " -> " << speed_after_mps << " m/s";
+    return out.str();
+}
+
 std::string resolveProjectPath( const std::filesystem::path& relativePath )
 {
     if ( std::filesystem::exists( relativePath ) )
@@ -734,6 +773,10 @@ void GameScene::load_level ( int level_id, const std::string& scores_path )
     pending_events_.clear();
     smoothed_dt_sec_ = 1.0f / 60.0f;
     smoothed_fps_ = 60.0f;
+    last_impact_outcome_ = ImpactOutcome::Grazed;
+    last_impact_speed_before_mps_ = 0.0f;
+    last_impact_speed_after_mps_ = 0.0f;
+    last_impact_age_sec_ = 999.0f;
     vfx_load_factor_ = 1.0f;
     render_targets_dirty_ = true;
     pending_result_token_ = 0;
@@ -988,6 +1031,8 @@ void GameScene::process_events()
     int collision_vfx_budget = std::max ( 3, static_cast<int> ( std::round ( 12.f * quality ) ) );
     int destroyed_vfx_budget = std::max ( 3, static_cast<int> ( std::round ( 8.f * quality ) ) );
     int ability_vfx_budget = std::max ( 2, static_cast<int> ( std::round ( 8.f * quality ) ) );
+    int impact_outcome_vfx_budget = std::max (
+        2, static_cast<int> ( std::round ( 7.f * quality ) ) );
 
     int processed_events = 0;
     while ( processed_events < events_budget && !pending_events_.empty() )
@@ -997,7 +1042,11 @@ void GameScene::process_events()
         ++processed_events;
 
         std::visit (
-            [this, &collision_vfx_budget, &destroyed_vfx_budget, &ability_vfx_budget]
+            [this,
+             &collision_vfx_budget,
+             &destroyed_vfx_budget,
+             &ability_vfx_budget,
+             &impact_outcome_vfx_budget]
             ( const auto& e )
             {
                 using T = std::decay_t<decltype ( e )>;
@@ -1187,6 +1236,49 @@ void GameScene::process_events()
 
                     impact_flash_ =
                         std::max ( impact_flash_, profile.destroyFlashBoost );
+                }
+                else if constexpr ( std::is_same_v<T, ImpactResolvedEvent> )
+                {
+                    last_impact_outcome_ = e.outcome;
+                    last_impact_speed_before_mps_ = e.speedBeforeMps;
+                    last_impact_speed_after_mps_ = e.speedAfterMps;
+                    last_impact_age_sec_ = 0.0f;
+
+                    if ( impact_outcome_vfx_budget <= 0 )
+                        return;
+                    --impact_outcome_vfx_budget;
+
+                    const platform::Vec2f pos ( e.contactPointPx.x, e.contactPointPx.y );
+                    if ( e.outcome == ImpactOutcome::BrokenCarryThrough )
+                    {
+                        particles_.emit_ring (
+                            pos, 12, platform::Color ( 186, 255, 232, 210 ),
+                            126.f, 0.24f, 3.5f );
+                        particles_.emit_shards (
+                            pos, 10, platform::Color ( 150, 244, 214, 198 ),
+                            146.f, 0.30f, 2.8f, 540.f );
+                        shake_time_ = std::max ( shake_time_, 0.08f );
+                        shake_strength_ = std::max ( shake_strength_, 3.3f );
+                        impact_flash_ = std::max ( impact_flash_, 0.09f );
+                    }
+                    else if ( e.outcome == ImpactOutcome::Blocked )
+                    {
+                        particles_.emit (
+                            pos, 8, platform::Color ( 255, 188, 148, 204 ),
+                            112.f, 0.22f, 2.9f );
+                        particles_.emit_ring (
+                            pos, 9, platform::Color ( 255, 166, 122, 190 ),
+                            96.f, 0.20f, 3.0f );
+                        shake_time_ = std::max ( shake_time_, 0.09f );
+                        shake_strength_ = std::max ( shake_strength_, 4.1f );
+                        impact_flash_ = std::max ( impact_flash_, 0.08f );
+                    }
+                    else
+                    {
+                        particles_.emit (
+                            pos, 4, platform::Color ( 194, 212, 255, 164 ),
+                            72.f, 0.18f, 2.5f );
+                    }
                 }
                 else if constexpr ( std::is_same_v<T, AbilityActivatedEvent> )
                 {
@@ -1384,6 +1476,7 @@ void GameScene::update()
 {
     const float raw_dt = frame_clock_.restart().asSeconds();
     const float dt = std::clamp ( raw_dt, 0.0f, 1.0f / 30.0f );
+    last_impact_age_sec_ = std::min ( 999.0f, last_impact_age_sec_ + dt );
 
     const float perf_dt = std::clamp ( raw_dt, 1.0f / 240.0f, 0.25f );
     smoothed_dt_sec_ = smoothed_dt_sec_ * 0.90f + perf_dt * 0.10f;
@@ -1831,9 +1924,18 @@ void GameScene::render ( platform::Window& window )
 
     if ( show_perf_overlay_ )
     {
-        perf_text_.setString (
+        std::string perf_overlay =
             std::to_string ( static_cast<int> ( std::round ( smoothed_fps_ ) ) )
-            + " fps" );
+            + " fps";
+        if ( last_impact_age_sec_ <= 2.5f )
+        {
+            perf_overlay += "\nimpact: "
+                            + make_impact_debug_line (
+                                last_impact_outcome_,
+                                last_impact_speed_before_mps_,
+                                last_impact_speed_after_mps_ );
+        }
+        perf_text_.setString ( perf_overlay );
         const auto bounds = perf_text_.getLocalBounds();
         perf_text_.setPosition ( {
             static_cast<float> ( window_size.x ) - bounds.size.x - 8.0f,
@@ -1992,8 +2094,21 @@ void GameScene::render ( platform::Window& window )
     {
         const std::string fps_str =
             std::to_string ( static_cast<int> ( std::round ( smoothed_fps_ ) ) ) + " fps";
+        const int fps_w = MeasureText ( fps_str.c_str(), 11 );
         DrawText ( fps_str.c_str(),
-                   static_cast<int> ( window_size.x ) - 60, 6, 11, WHITE );
+                   static_cast<int> ( window_size.x ) - fps_w - 8,
+                   6, 11, WHITE );
+        if ( last_impact_age_sec_ <= 2.5f )
+        {
+            const std::string impact_str = "impact: " + make_impact_debug_line (
+                last_impact_outcome_,
+                last_impact_speed_before_mps_,
+                last_impact_speed_after_mps_ );
+            const int impact_w = MeasureText ( impact_str.c_str(), 11 );
+            DrawText ( impact_str.c_str(),
+                       static_cast<int> ( window_size.x ) - impact_w - 8,
+                       20, 11, impact_outcome_color ( last_impact_outcome_ ).to_rl() );
+        }
     }
 #endif
 }

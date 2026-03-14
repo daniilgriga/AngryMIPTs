@@ -105,6 +105,11 @@ inline std::uint64_t body_id_key(b2BodyId id)
         ^ static_cast<std::uint64_t>(id.index1);
 }
 
+inline float vec2_length(b2Vec2 v)
+{
+    return std::sqrt(v.x * v.x + v.y * v.y);
+}
+
 inline Vec2 rotate_px_vector(const Vec2& v, float angleRad)
 {
     const float c = std::cos(angleRad);
@@ -790,26 +795,70 @@ void PhysicsEngine::step(float dt)
             continue;
         }
 
+        const Vec2 contactPointPx = worldToPx({hit.point.x, hit.point.y});
         if (hit.approachSpeed >= kCollisionEventMinSpeedMps)
         {
             events_.push_back(CollisionEvent{
                 bindingA->id,
                 bindingB->id,
                 hit.approachSpeed,
-                worldToPx({hit.point.x, hit.point.y})});
+                contactPointPx});
         }
+
+        const bool aIsProjectile = bindingA->kind == ObjectSnapshot::Kind::Projectile;
+        const bool bIsProjectile = bindingB->kind == ObjectSnapshot::Kind::Projectile;
+        const bool aIsDestructibleKind = is_destructible_kind(bindingA->kind);
+        const bool bIsDestructibleKind = is_destructible_kind(bindingB->kind);
+        const bool aIsDestructible = aIsDestructibleKind && bindingA->isDestructible;
+        const bool bIsDestructible = bIsDestructibleKind && bindingB->isDestructible;
+
+        auto emit_impact_event = [this, &contactPointPx](
+                                     const BodyBinding* projectile,
+                                     const BodyBinding* block,
+                                     ImpactOutcome outcome,
+                                     float speedBeforeMps,
+                                     float speedAfterMps)
+        {
+            events_.push_back(ImpactResolvedEvent{
+                projectile->id,
+                block->id,
+                outcome,
+                speedBeforeMps,
+                speedAfterMps,
+                contactPointPx});
+        };
 
         const float effectiveSpeed = std::max(0.0f, hit.approachSpeed - kDamageMinSpeedMps);
         if (effectiveSpeed <= 0.0f)
         {
+            if (aIsProjectile && bIsDestructibleKind)
+            {
+                const b2Vec2 projectileVelocity = b2Body_IsValid(bindingA->bodyId)
+                    ? b2Body_GetLinearVelocity(bindingA->bodyId)
+                    : b2Vec2{0.0f, 0.0f};
+                emit_impact_event(
+                    bindingA,
+                    bindingB,
+                    ImpactOutcome::Grazed,
+                    hit.approachSpeed,
+                    vec2_length(projectileVelocity));
+            }
+            else if (bIsProjectile && aIsDestructibleKind)
+            {
+                const b2Vec2 projectileVelocity = b2Body_IsValid(bindingB->bodyId)
+                    ? b2Body_GetLinearVelocity(bindingB->bodyId)
+                    : b2Vec2{0.0f, 0.0f};
+                emit_impact_event(
+                    bindingB,
+                    bindingA,
+                    ImpactOutcome::Grazed,
+                    hit.approachSpeed,
+                    vec2_length(projectileVelocity));
+            }
             continue;
         }
 
         const float baseDamage = effectiveSpeed * kDamageScale;
-        const bool aIsProjectile = bindingA->kind == ObjectSnapshot::Kind::Projectile;
-        const bool bIsProjectile = bindingB->kind == ObjectSnapshot::Kind::Projectile;
-        const bool aIsDestructible = is_destructible_kind(bindingA->kind) && bindingA->isDestructible;
-        const bool bIsDestructible = is_destructible_kind(bindingB->kind) && bindingB->isDestructible;
 
         if (aIsProjectile && bIsDestructible)
         {
@@ -824,6 +873,15 @@ void PhysicsEngine::step(float dt)
                 projectileVelocity,
                 hit.normal);
             pendingDamageById[bindingB->id] += outcome.blockDamage;
+            const float speedAfter = outcome.willBreak && outcome.hasVelocityCorrection
+                ? vec2_length(outcome.correctedProjectileVelocity)
+                : vec2_length(projectileVelocity);
+            emit_impact_event(
+                bindingA,
+                bindingB,
+                outcome.willBreak ? ImpactOutcome::BrokenCarryThrough : ImpactOutcome::Blocked,
+                hit.approachSpeed,
+                speedAfter);
             if (outcome.willBreak && outcome.hasVelocityCorrection)
             {
                 const std::uint64_t key = body_id_key(bindingA->bodyId);
@@ -865,6 +923,15 @@ void PhysicsEngine::step(float dt)
                 projectileVelocity,
                 b2Vec2{-hit.normal.x, -hit.normal.y});
             pendingDamageById[bindingA->id] += outcome.blockDamage;
+            const float speedAfter = outcome.willBreak && outcome.hasVelocityCorrection
+                ? vec2_length(outcome.correctedProjectileVelocity)
+                : vec2_length(projectileVelocity);
+            emit_impact_event(
+                bindingB,
+                bindingA,
+                outcome.willBreak ? ImpactOutcome::BrokenCarryThrough : ImpactOutcome::Blocked,
+                hit.approachSpeed,
+                speedAfter);
             if (outcome.willBreak && outcome.hasVelocityCorrection)
             {
                 const std::uint64_t key = body_id_key(bindingB->bodyId);
@@ -891,6 +958,32 @@ void PhysicsEngine::step(float dt)
                     }
                 }
             }
+            continue;
+        }
+        if (aIsProjectile && bIsDestructibleKind)
+        {
+            const b2Vec2 projectileVelocity = b2Body_IsValid(bindingA->bodyId)
+                ? b2Body_GetLinearVelocity(bindingA->bodyId)
+                : b2Vec2{0.0f, 0.0f};
+            emit_impact_event(
+                bindingA,
+                bindingB,
+                ImpactOutcome::Blocked,
+                hit.approachSpeed,
+                vec2_length(projectileVelocity));
+            continue;
+        }
+        if (bIsProjectile && aIsDestructibleKind)
+        {
+            const b2Vec2 projectileVelocity = b2Body_IsValid(bindingB->bodyId)
+                ? b2Body_GetLinearVelocity(bindingB->bodyId)
+                : b2Vec2{0.0f, 0.0f};
+            emit_impact_event(
+                bindingB,
+                bindingA,
+                ImpactOutcome::Blocked,
+                hit.approachSpeed,
+                vec2_length(projectileVelocity));
             continue;
         }
         if (aIsProjectile && bIsProjectile)
