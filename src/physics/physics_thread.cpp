@@ -86,13 +86,13 @@ bool PhysicsThread::isRunning() const
 void PhysicsThread::registerLevel(const LevelData& level)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    engine_.registerLevel(level);
+    engine_.register_level(level);
 }
 
 void PhysicsThread::loadLevel(const LevelData& level)
 {
     std::lock_guard<std::mutex> lock(mutex_);
-    engine_.registerLevel(level);
+    engine_.register_level(level);
 
     if (running_)
     {
@@ -100,7 +100,7 @@ void PhysicsThread::loadLevel(const LevelData& level)
     }
     else
     {
-        engine_.loadLevel(level);
+        engine_.load_level(level);
         publishSnapshotLocked();
     }
 }
@@ -135,11 +135,11 @@ void PhysicsThread::tickSingleThread(float dt)
     }
 
     std::lock_guard<std::mutex> lock(mutex_);
-    engine_.processCommands(commandQueue_);
+    engine_.process_commands(commandQueue_);
     engine_.step(dt);
     publishSnapshotLocked();
 
-    std::vector<Event> events = engine_.drainEvents();
+    std::vector<Event> events = engine_.drain_events();
     for (const Event& event : events)
     {
         eventQueue_.push(event);
@@ -188,11 +188,11 @@ void PhysicsThread::workerLoop()
         {
             {
                 std::lock_guard<std::mutex> lock(mutex_);
-                engine_.processCommands(commandQueue_);
+                engine_.process_commands(commandQueue_);
                 engine_.step(kFixedDtSec);
                 publishSnapshotLocked();
 
-                std::vector<Event> events = engine_.drainEvents();
+                std::vector<Event> events = engine_.drain_events();
                 for (const Event& event : events)
                 {
                     eventQueue_.push(event);
@@ -220,7 +220,7 @@ void PhysicsThread::publishSnapshotLocked()
     std::lock_guard<std::mutex> lock(snapshotMutex_);
     const int front = frontSnapshotIndex_.load(std::memory_order_relaxed);
     const int back = 1 - front;
-    snapshots_[static_cast<size_t>(back)] = engine_.getSnapshot();
+    snapshots_[static_cast<size_t>(back)] = engine_.get_snapshot();
     frontSnapshotIndex_.store(back, std::memory_order_release);
 }
 

@@ -84,7 +84,7 @@ void runCommandsAndStep( PhysicsEngine& engine, const std::vector<Command>& comm
         queue.push( cmd );
     }
 
-    engine.processCommands( queue );
+    engine.process_commands( queue );
     engine.step( 1.0f / 60.0f );
 }
 
@@ -146,9 +146,9 @@ TEST( PhysicsEngineStatus, WinOnlyWhenNoAliveTargets )
         {},
         200,
         300 );
-    engine.loadLevel( noTargetsLevel );
+    engine.load_level( noTargetsLevel );
     runCommandsAndStep( engine, {} );
-    auto snapshot = engine.getSnapshot();
+    auto snapshot = engine.get_snapshot();
     EXPECT_EQ( countAliveTargets( snapshot ), 0 );
     EXPECT_EQ( snapshot.status, LevelStatus::Win );
 
@@ -175,7 +175,7 @@ TEST( PhysicsEngineStatus, WinOnlyWhenNoAliveTargets )
         50,
         100 );
 
-    engine.loadLevel( targetAliveLevel );
+    engine.load_level( targetAliveLevel );
     runCommandsAndStep(
         engine,
         {
@@ -183,7 +183,7 @@ TEST( PhysicsEngineStatus, WinOnlyWhenNoAliveTargets )
             ActivateAbilityCmd{angry::INVALID_ID},
         } );
 
-    snapshot = engine.getSnapshot();
+    snapshot = engine.get_snapshot();
     EXPECT_GT( snapshot.score, 0 );  // score threshold may be reached via block destruction
     EXPECT_GT( countAliveTargets( snapshot ), 0 );
     EXPECT_EQ( snapshot.status, LevelStatus::Lose );
@@ -216,14 +216,14 @@ TEST( PhysicsEngineStars, StarsComputedFromScoreThresholds )
         {target},
         150,
         200 );
-    engine.loadLevel( twoStarsLevel );
+    engine.load_level( twoStarsLevel );
     runCommandsAndStep(
         engine,
         {
             LaunchCmd{Vec2{0.0f, 0.0f}},
             ActivateAbilityCmd{angry::INVALID_ID},
         } );
-    auto snapshot = engine.getSnapshot();
+    auto snapshot = engine.get_snapshot();
     EXPECT_EQ( snapshot.status, LevelStatus::Win );
     EXPECT_EQ( snapshot.score, 150 );
     EXPECT_EQ( snapshot.stars, 2 );
@@ -245,14 +245,14 @@ TEST( PhysicsEngineStars, StarsComputedFromScoreThresholds )
         {target},
         150,
         200 );
-    engine.loadLevel( threeStarsLevel );
+    engine.load_level( threeStarsLevel );
     runCommandsAndStep(
         engine,
         {
             LaunchCmd{Vec2{0.0f, 0.0f}},
             ActivateAbilityCmd{angry::INVALID_ID},
         } );
-    snapshot = engine.getSnapshot();
+    snapshot = engine.get_snapshot();
     EXPECT_EQ( snapshot.status, LevelStatus::Win );
     EXPECT_EQ( snapshot.score, 200 );
     EXPECT_EQ( snapshot.stars, 3 );
@@ -296,7 +296,7 @@ TEST( PhysicsEngineScore, BlockScoreByMaterial )
             100,
             200 );
 
-        engine.loadLevel( level );
+        engine.load_level( level );
         runCommandsAndStep(
             engine,
             {
@@ -304,7 +304,7 @@ TEST( PhysicsEngineScore, BlockScoreByMaterial )
                 ActivateAbilityCmd{angry::INVALID_ID},
             } );
 
-        const auto snapshot = engine.getSnapshot();
+        const auto snapshot = engine.get_snapshot();
         EXPECT_EQ( snapshot.score, c.expectedScore );
     }
 }
@@ -343,7 +343,7 @@ TEST( PhysicsEngineTriangles, SnapshotKeepsAsymmetricTriangleVertices )
         200,
         300 );
 
-    engine.loadLevel( level );
+    engine.load_level( level );
 
     // Step a few frames to ensure triangle body is stable in simulation.
     for ( int i = 0; i < 10; ++i )
@@ -351,7 +351,7 @@ TEST( PhysicsEngineTriangles, SnapshotKeepsAsymmetricTriangleVertices )
         runCommandsAndStep( engine, {} );
     }
 
-    const auto snapshot = engine.getSnapshot();
+    const auto snapshot = engine.get_snapshot();
     auto blockIt = std::find_if(
         snapshot.objects.begin(),
         snapshot.objects.end(),
@@ -401,7 +401,7 @@ TEST( PhysicsEngineEvents, AbilityActivatedEventForAllAbilityProjectiles )
             200,
             300 );
 
-        engine.loadLevel( level );
+        engine.load_level( level );
         runCommandsAndStep(
             engine,
             {
@@ -409,7 +409,7 @@ TEST( PhysicsEngineEvents, AbilityActivatedEventForAllAbilityProjectiles )
                 ActivateAbilityCmd{angry::INVALID_ID},
             } );
 
-        const std::vector<angry::Event> events = engine.drainEvents();
+        const std::vector<angry::Event> events = engine.drain_events();
         EXPECT_TRUE( hasAbilityEventFor( events, projectileType ) )
             << "missing AbilityActivatedEvent for projectileType="
             << static_cast<int>( projectileType );
@@ -444,7 +444,7 @@ TEST( PhysicsEngineImpact, ProjectileBreaksBlockKeepsMotion )
         300,
         500 );
 
-    engine.loadLevel( level );
+    engine.load_level( level );
     runCommandsAndStep(
         engine,
         { LaunchCmd{Vec2{140.0f, 0.0f}} } );
@@ -457,7 +457,7 @@ TEST( PhysicsEngineImpact, ProjectileBreaksBlockKeepsMotion )
     for ( int i = 0; i < 120; ++i )
     {
         runCommandsAndStep( engine, {} );
-        const auto snapshot = engine.getSnapshot();
+        const auto snapshot = engine.get_snapshot();
         if ( snapshot.score >= 50 )
         {
             blockDestroyed = true;
@@ -509,7 +509,7 @@ TEST( PhysicsEngineImpact, ProjectileHitsIndestructibleStops )
         300,
         500 );
 
-    engine.loadLevel( level );
+    engine.load_level( level );
     runCommandsAndStep(
         engine,
         { LaunchCmd{Vec2{140.0f, 0.0f}} } );
@@ -518,14 +518,14 @@ TEST( PhysicsEngineImpact, ProjectileHitsIndestructibleStops )
     for ( int i = 0; i < 120; ++i )
     {
         runCommandsAndStep( engine, {} );
-        const auto snapshot = engine.getSnapshot();
+        const auto snapshot = engine.get_snapshot();
         if ( const ObjectSnapshot* projectile = findFirstActiveProjectile( snapshot ) )
         {
             maxProjectileX = std::max( maxProjectileX, projectile->positionPx.x );
         }
     }
 
-    EXPECT_EQ( engine.getSnapshot().score, 0 );
+    EXPECT_EQ( engine.get_snapshot().score, 0 );
     EXPECT_GT( maxProjectileX, 0.0f );
     EXPECT_LT( maxProjectileX, blockX + 25.0f );
 }
@@ -562,7 +562,7 @@ TEST( PhysicsEngineImpact, NoEnergyExplosion )
         400,
         600 );
 
-    engine.loadLevel( level );
+    engine.load_level( level );
     runCommandsAndStep(
         engine,
         { LaunchCmd{Vec2{150.0f, 0.0f}} } );
@@ -574,7 +574,7 @@ TEST( PhysicsEngineImpact, NoEnergyExplosion )
     for ( int i = 0; i < 180; ++i )
     {
         runCommandsAndStep( engine, {} );
-        const auto snapshot = engine.getSnapshot();
+        const auto snapshot = engine.get_snapshot();
         const ObjectSnapshot* projectile = findFirstActiveProjectile( snapshot );
         if ( projectile == nullptr )
         {
@@ -593,6 +593,6 @@ TEST( PhysicsEngineImpact, NoEnergyExplosion )
         hasPrevPos = true;
     }
 
-    EXPECT_GT( engine.getSnapshot().score, 0 );
+    EXPECT_GT( engine.get_snapshot().score, 0 );
     EXPECT_LT( maxEstimatedSpeedMps, 30.0f );
 }

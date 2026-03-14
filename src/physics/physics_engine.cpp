@@ -411,12 +411,12 @@ PhysicsEngine::~PhysicsEngine()
 
 // #=# Level Lifecycle API #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
-void PhysicsEngine::registerLevel(const LevelData& level)
+void PhysicsEngine::register_level(const LevelData& level)
 {
     levelRegistry_[level.meta.id] = level;
 }
 
-void PhysicsEngine::loadLevel(const LevelData& level)
+void PhysicsEngine::load_level(const LevelData& level)
 {
     if (B2_IS_NON_NULL(worldId_))
     {
@@ -425,7 +425,7 @@ void PhysicsEngine::loadLevel(const LevelData& level)
     }
 
     currentLevel_ = level;
-    registerLevel(level);
+    register_level(level);
     levelLoaded_ = true;
     paused_ = false;
 
@@ -492,7 +492,7 @@ void PhysicsEngine::loadLevel(const LevelData& level)
 
 // #=# Simulation Step #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
-void PhysicsEngine::processCommands(ThreadSafeQueue<Command>& cmdQueue)
+void PhysicsEngine::process_commands(ThreadSafeQueue<Command>& cmdQueue)
 {
     while (const std::optional<Command> cmd = cmdQueue.try_pop())
     {
@@ -1215,12 +1215,12 @@ void PhysicsEngine::step(float dt)
 
 // #=# Snapshot & Events #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
 
-WorldSnapshot PhysicsEngine::getSnapshot() const
+WorldSnapshot PhysicsEngine::get_snapshot() const
 {
     return snapshot_;
 }
 
-std::vector<Event> PhysicsEngine::drainEvents()
+std::vector<Event> PhysicsEngine::drain_events()
 {
     std::vector<Event> out;
     out.swap(events_);
@@ -1241,14 +1241,14 @@ void PhysicsEngine::apply_command(const Command& cmd)
                 const auto it = levelRegistry_.find(concrete.levelId);
                 if (it != levelRegistry_.end())
                 {
-                    loadLevel(it->second);
+                    load_level(it->second);
                 }
             }
             else if constexpr (std::is_same_v<T, RestartCmd>)
             {
                 if (concrete.levelId == currentLevel_.meta.id)
                 {
-                    loadLevel(currentLevel_);
+                    load_level(currentLevel_);
                 }
             }
             else if constexpr (std::is_same_v<T, PauseCmd>)

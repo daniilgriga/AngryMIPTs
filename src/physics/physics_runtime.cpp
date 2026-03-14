@@ -43,7 +43,7 @@ void PhysicsRuntime::registerLevel(const LevelData& level)
         return;
     }
 
-    singleEngine_.registerLevel(level);
+    singleEngine_.register_level(level);
 }
 
 void PhysicsRuntime::loadLevel(const LevelData& level)
@@ -54,7 +54,7 @@ void PhysicsRuntime::loadLevel(const LevelData& level)
         return;
     }
 
-    singleEngine_.loadLevel(level);
+    singleEngine_.load_level(level);
 }
 
 void PhysicsRuntime::processCommands(ThreadSafeQueue<Command>& cmdQueue)
@@ -68,7 +68,7 @@ void PhysicsRuntime::processCommands(ThreadSafeQueue<Command>& cmdQueue)
         return;
     }
 
-    singleEngine_.processCommands(cmdQueue);
+    singleEngine_.process_commands(cmdQueue);
 }
 
 void PhysicsRuntime::step(float dt)
@@ -90,7 +90,7 @@ WorldSnapshot PhysicsRuntime::getSnapshot() const
         return threadedEngine_.readSnapshot();
     }
 
-    return singleEngine_.getSnapshot();
+    return singleEngine_.get_snapshot();
 }
 
 std::vector<Event> PhysicsRuntime::drainEvents()
@@ -100,7 +100,7 @@ std::vector<Event> PhysicsRuntime::drainEvents()
         return threadedEngine_.drainEvents();
     }
 
-    return singleEngine_.drainEvents();
+    return singleEngine_.drain_events();
 }
 
 // #=# Accessors #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=
