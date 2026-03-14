@@ -46,7 +46,7 @@ using angry::TargetData;
 using angry::ThreadSafeQueue;
 using angry::Vec2;
 
-LevelData makeLevel(
+LevelData make_level(
     int id,
     std::vector<ProjectileType> projectiles,
     std::vector<BlockData> blocks,
@@ -76,7 +76,7 @@ LevelData makeLevel(
     return level;
 }
 
-void runCommandsAndStep( PhysicsEngine& engine, const std::vector<Command>& commands )
+void run_commands_and_step( PhysicsEngine& engine, const std::vector<Command>& commands )
 {
     ThreadSafeQueue<Command> queue;
     for ( const Command& cmd : commands )
@@ -88,7 +88,7 @@ void runCommandsAndStep( PhysicsEngine& engine, const std::vector<Command>& comm
     engine.step( 1.0f / 60.0f );
 }
 
-int countAliveTargets( const angry::WorldSnapshot& snapshot )
+int count_alive_targets( const angry::WorldSnapshot& snapshot )
 {
     int alive = 0;
     for ( const auto& object : snapshot.objects )
@@ -101,7 +101,7 @@ int countAliveTargets( const angry::WorldSnapshot& snapshot )
     return alive;
 }
 
-bool hasAbilityEventFor(
+bool has_ability_event_for(
     const std::vector<angry::Event>& events,
     ProjectileType type )
 {
@@ -115,7 +115,7 @@ bool hasAbilityEventFor(
         } );
 }
 
-const ObjectSnapshot* findFirstActiveProjectile( const angry::WorldSnapshot& snapshot )
+const ObjectSnapshot* find_first_active_projectile( const angry::WorldSnapshot& snapshot )
 {
     auto it = std::find_if(
         snapshot.objects.begin(),
@@ -139,7 +139,7 @@ TEST( PhysicsEngineStatus, WinOnlyWhenNoAliveTargets )
 {
     PhysicsEngine engine;
 
-    const LevelData noTargetsLevel = makeLevel(
+    const LevelData noTargetsLevel = make_level(
         101,
         {},
         {},
@@ -147,9 +147,9 @@ TEST( PhysicsEngineStatus, WinOnlyWhenNoAliveTargets )
         200,
         300 );
     engine.load_level( noTargetsLevel );
-    runCommandsAndStep( engine, {} );
+    run_commands_and_step( engine, {} );
     auto snapshot = engine.get_snapshot();
-    EXPECT_EQ( countAliveTargets( snapshot ), 0 );
+    EXPECT_EQ( count_alive_targets( snapshot ), 0 );
     EXPECT_EQ( snapshot.status, LevelStatus::Win );
 
     const BlockData woodBlock{
@@ -167,7 +167,7 @@ TEST( PhysicsEngineStatus, WinOnlyWhenNoAliveTargets )
         12.0f,
         999.0f,
         10 };
-    const LevelData targetAliveLevel = makeLevel(
+    const LevelData targetAliveLevel = make_level(
         102,
         {ProjectileType::Bomber},
         {woodBlock},
@@ -176,16 +176,16 @@ TEST( PhysicsEngineStatus, WinOnlyWhenNoAliveTargets )
         100 );
 
     engine.load_level( targetAliveLevel );
-    runCommandsAndStep(
+    run_commands_and_step(
         engine,
         {
             LaunchCmd{Vec2{0.0f, 0.0f}},
-            ActivateAbilityCmd{angry::INVALID_ID},
+            ActivateAbilityCmd{angry::kInvalidId},
         } );
 
     snapshot = engine.get_snapshot();
     EXPECT_GT( snapshot.score, 0 );  // score threshold may be reached via block destruction
-    EXPECT_GT( countAliveTargets( snapshot ), 0 );
+    EXPECT_GT( count_alive_targets( snapshot ), 0 );
     EXPECT_EQ( snapshot.status, LevelStatus::Lose );
 }
 
@@ -209,7 +209,7 @@ TEST( PhysicsEngineStars, StarsComputedFromScoreThresholds )
         Material::Wood,
         1.0f };
 
-    const LevelData twoStarsLevel = makeLevel(
+    const LevelData twoStarsLevel = make_level(
         201,
         {ProjectileType::Bomber},
         {woodBlock},
@@ -217,11 +217,11 @@ TEST( PhysicsEngineStars, StarsComputedFromScoreThresholds )
         150,
         200 );
     engine.load_level( twoStarsLevel );
-    runCommandsAndStep(
+    run_commands_and_step(
         engine,
         {
             LaunchCmd{Vec2{0.0f, 0.0f}},
-            ActivateAbilityCmd{angry::INVALID_ID},
+            ActivateAbilityCmd{angry::kInvalidId},
         } );
     auto snapshot = engine.get_snapshot();
     EXPECT_EQ( snapshot.status, LevelStatus::Win );
@@ -238,7 +238,7 @@ TEST( PhysicsEngineStars, StarsComputedFromScoreThresholds )
         0.0f,
         Material::Stone,
         1.0f };
-    const LevelData threeStarsLevel = makeLevel(
+    const LevelData threeStarsLevel = make_level(
         202,
         {ProjectileType::Bomber},
         {stoneBlock},
@@ -246,11 +246,11 @@ TEST( PhysicsEngineStars, StarsComputedFromScoreThresholds )
         150,
         200 );
     engine.load_level( threeStarsLevel );
-    runCommandsAndStep(
+    run_commands_and_step(
         engine,
         {
             LaunchCmd{Vec2{0.0f, 0.0f}},
-            ActivateAbilityCmd{angry::INVALID_ID},
+            ActivateAbilityCmd{angry::kInvalidId},
         } );
     snapshot = engine.get_snapshot();
     EXPECT_EQ( snapshot.status, LevelStatus::Win );
@@ -288,7 +288,7 @@ TEST( PhysicsEngineScore, BlockScoreByMaterial )
             0.0f,
             c.material,
             1.0f };
-        const LevelData level = makeLevel(
+        const LevelData level = make_level(
             levelId++,
             {ProjectileType::Bomber},
             {block},
@@ -297,11 +297,11 @@ TEST( PhysicsEngineScore, BlockScoreByMaterial )
             200 );
 
         engine.load_level( level );
-        runCommandsAndStep(
+        run_commands_and_step(
             engine,
             {
                 LaunchCmd{Vec2{0.0f, 0.0f}},
-                ActivateAbilityCmd{angry::INVALID_ID},
+                ActivateAbilityCmd{angry::kInvalidId},
             } );
 
         const auto snapshot = engine.get_snapshot();
@@ -335,7 +335,7 @@ TEST( PhysicsEngineTriangles, SnapshotKeepsAsymmetricTriangleVertices )
         999.0f,
         100 };
 
-    const LevelData level = makeLevel(
+    const LevelData level = make_level(
         500,
         {ProjectileType::Standard},
         {triangle},
@@ -348,7 +348,7 @@ TEST( PhysicsEngineTriangles, SnapshotKeepsAsymmetricTriangleVertices )
     // Step a few frames to ensure triangle body is stable in simulation.
     for ( int i = 0; i < 10; ++i )
     {
-        runCommandsAndStep( engine, {} );
+        run_commands_and_step( engine, {} );
     }
 
     const auto snapshot = engine.get_snapshot();
@@ -393,7 +393,7 @@ TEST( PhysicsEngineEvents, AbilityActivatedEventForAllAbilityProjectiles )
             12.0f,
             999.0f,
             100 };
-        const LevelData level = makeLevel(
+        const LevelData level = make_level(
             levelId++,
             {projectileType},
             {},
@@ -402,15 +402,15 @@ TEST( PhysicsEngineEvents, AbilityActivatedEventForAllAbilityProjectiles )
             300 );
 
         engine.load_level( level );
-        runCommandsAndStep(
+        run_commands_and_step(
             engine,
             {
                 LaunchCmd{Vec2{-20.0f, -20.0f}},
-                ActivateAbilityCmd{angry::INVALID_ID},
+                ActivateAbilityCmd{angry::kInvalidId},
             } );
 
         const std::vector<angry::Event> events = engine.drain_events();
-        EXPECT_TRUE( hasAbilityEventFor( events, projectileType ) )
+        EXPECT_TRUE( has_ability_event_for( events, projectileType ) )
             << "missing AbilityActivatedEvent for projectileType="
             << static_cast<int>( projectileType );
     }
@@ -436,7 +436,7 @@ TEST( PhysicsEngineImpact, ProjectileBreaksBlockKeepsMotion )
         12.0f,
         999.0f,
         100 };
-    const LevelData level = makeLevel(
+    const LevelData level = make_level(
         601,
         {ProjectileType::Standard},
         {fragileWood},
@@ -445,7 +445,7 @@ TEST( PhysicsEngineImpact, ProjectileBreaksBlockKeepsMotion )
         500 );
 
     engine.load_level( level );
-    runCommandsAndStep(
+    run_commands_and_step(
         engine,
         { LaunchCmd{Vec2{140.0f, 0.0f}} } );
 
@@ -456,12 +456,12 @@ TEST( PhysicsEngineImpact, ProjectileBreaksBlockKeepsMotion )
     float traveledAfterBreak = 0.0f;
     for ( int i = 0; i < 120; ++i )
     {
-        runCommandsAndStep( engine, {} );
+        run_commands_and_step( engine, {} );
         const auto snapshot = engine.get_snapshot();
         if ( snapshot.score >= 50 )
         {
             blockDestroyed = true;
-            if ( const ObjectSnapshot* projectile = findFirstActiveProjectile( snapshot ) )
+            if ( const ObjectSnapshot* projectile = find_first_active_projectile( snapshot ) )
             {
                 seenProjectileAfterBreak = true;
                 if ( hasPrevAfterBreak )
@@ -501,7 +501,7 @@ TEST( PhysicsEngineImpact, ProjectileHitsIndestructibleStops )
         12.0f,
         999.0f,
         100 };
-    const LevelData level = makeLevel(
+    const LevelData level = make_level(
         602,
         {ProjectileType::Standard},
         {indestructible},
@@ -510,16 +510,16 @@ TEST( PhysicsEngineImpact, ProjectileHitsIndestructibleStops )
         500 );
 
     engine.load_level( level );
-    runCommandsAndStep(
+    run_commands_and_step(
         engine,
         { LaunchCmd{Vec2{140.0f, 0.0f}} } );
 
     float maxProjectileX = -1.0f;
     for ( int i = 0; i < 120; ++i )
     {
-        runCommandsAndStep( engine, {} );
+        run_commands_and_step( engine, {} );
         const auto snapshot = engine.get_snapshot();
-        if ( const ObjectSnapshot* projectile = findFirstActiveProjectile( snapshot ) )
+        if ( const ObjectSnapshot* projectile = find_first_active_projectile( snapshot ) )
         {
             maxProjectileX = std::max( maxProjectileX, projectile->positionPx.x );
         }
@@ -554,7 +554,7 @@ TEST( PhysicsEngineImpact, NoEnergyExplosion )
         12.0f,
         999.0f,
         100 };
-    const LevelData level = makeLevel(
+    const LevelData level = make_level(
         603,
         {ProjectileType::Heavy},
         fragileBlocks,
@@ -563,7 +563,7 @@ TEST( PhysicsEngineImpact, NoEnergyExplosion )
         600 );
 
     engine.load_level( level );
-    runCommandsAndStep(
+    run_commands_and_step(
         engine,
         { LaunchCmd{Vec2{150.0f, 0.0f}} } );
 
@@ -573,9 +573,9 @@ TEST( PhysicsEngineImpact, NoEnergyExplosion )
 
     for ( int i = 0; i < 180; ++i )
     {
-        runCommandsAndStep( engine, {} );
+        run_commands_and_step( engine, {} );
         const auto snapshot = engine.get_snapshot();
-        const ObjectSnapshot* projectile = findFirstActiveProjectile( snapshot );
+        const ObjectSnapshot* projectile = find_first_active_projectile( snapshot );
         if ( projectile == nullptr )
         {
             continue;
@@ -586,7 +586,7 @@ TEST( PhysicsEngineImpact, NoEnergyExplosion )
             const float dx = projectile->positionPx.x - prevPos.x;
             const float dy = projectile->positionPx.y - prevPos.y;
             const float speedPxPerSec = std::sqrt( dx * dx + dy * dy ) * 60.0f;
-            const float speedMps = speedPxPerSec / angry::PIXELS_PER_METER;
+            const float speedMps = speedPxPerSec / angry::kPixelsPerMeter;
             maxEstimatedSpeedMps = std::max( maxEstimatedSpeedMps, speedMps );
         }
         prevPos = projectile->positionPx;

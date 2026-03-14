@@ -23,7 +23,7 @@ namespace
 
 // #=# Test Helpers #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
-std::filesystem::path makeTempSessionPath()
+std::filesystem::path make_temp_session_path()
 {
     const auto now = std::chrono::steady_clock::now().time_since_epoch().count();
     return std::filesystem::temp_directory_path()
@@ -34,7 +34,7 @@ class TempSessionFile
 {
 public:
     TempSessionFile()
-        : path_( makeTempSessionPath() )
+        : path_( make_temp_session_path() )
     {
     }
 
@@ -44,7 +44,7 @@ public:
         std::filesystem::remove( path_, ec );
     }
 
-    const std::string pathString() const
+    const std::string path_string() const
     {
         return path_.string();
     }
@@ -64,13 +64,13 @@ private:
 
 TEST( SessionManager, SaveThenLoadRestoresSession )
 {
-    TempSessionFile tempFile;
+    TempSessionFile temp_file;
 
-    angry::SessionManager writer( tempFile.pathString() );
+    angry::SessionManager writer( temp_file.path_string() );
     writer.setSession( "token-abc", "alex" );
     writer.saveSession();
 
-    angry::SessionManager reader( tempFile.pathString() );
+    angry::SessionManager reader( temp_file.path_string() );
     reader.loadSession();
 
     EXPECT_TRUE( reader.isLoggedIn() );
@@ -80,9 +80,9 @@ TEST( SessionManager, SaveThenLoadRestoresSession )
 
 TEST( SessionManager, MissingFileMeansEmptySession )
 {
-    TempSessionFile tempFile;
+    TempSessionFile temp_file;
 
-    angry::SessionManager sm( tempFile.pathString() );
+    angry::SessionManager sm( temp_file.path_string() );
     sm.loadSession();
 
     EXPECT_FALSE( sm.isLoggedIn() );
@@ -92,13 +92,13 @@ TEST( SessionManager, MissingFileMeansEmptySession )
 
 TEST( SessionManager, BrokenJsonResultsInEmptySession )
 {
-    TempSessionFile tempFile;
+    TempSessionFile temp_file;
     {
-        std::ofstream out( tempFile.path() );
+        std::ofstream out( temp_file.path() );
         out << "{ not valid json";
     }
 
-    angry::SessionManager sm( tempFile.pathString() );
+    angry::SessionManager sm( temp_file.path_string() );
     sm.loadSession();
 
     EXPECT_FALSE( sm.isLoggedIn() );
@@ -108,18 +108,18 @@ TEST( SessionManager, BrokenJsonResultsInEmptySession )
 
 TEST( SessionManager, ClearSessionRemovesFileAndState )
 {
-    TempSessionFile tempFile;
+    TempSessionFile temp_file;
 
-    angry::SessionManager sm( tempFile.pathString() );
+    angry::SessionManager sm( temp_file.path_string() );
     sm.setSession( "token-xyz", "mipt" );
     sm.saveSession();
 
-    ASSERT_TRUE( std::filesystem::exists( tempFile.path() ) );
+    ASSERT_TRUE( std::filesystem::exists( temp_file.path() ) );
     ASSERT_TRUE( sm.isLoggedIn() );
 
     sm.clearSession();
 
-    EXPECT_FALSE( std::filesystem::exists( tempFile.path() ) );
+    EXPECT_FALSE( std::filesystem::exists( temp_file.path() ) );
     EXPECT_FALSE( sm.isLoggedIn() );
     EXPECT_TRUE( sm.token().empty() );
     EXPECT_TRUE( sm.username().empty() );

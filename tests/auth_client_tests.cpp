@@ -31,7 +31,7 @@ namespace
 
 // #=# Test Helpers & Mock Server #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
-bool canBindLoopbackSocket()
+bool can_bind_loopback_socket()
 {
     const int fd = ::socket( AF_INET, SOCK_STREAM, 0 );
     if ( fd < 0 )
@@ -94,7 +94,7 @@ public:
         port_ = ntohs( boundAddr.sin_port );
 
         running_.store( true );
-        worker_ = std::thread( [this]() { serveLoop(); } );
+        worker_ = std::thread( [this]() { serve_loop(); } );
     }
 
     ~LocalMockHttpServer()
@@ -102,7 +102,7 @@ public:
         stop();
     }
 
-    std::string baseUrl() const
+    std::string base_url() const
     {
         return "http://127.0.0.1:" + std::to_string( port_ );
     }
@@ -124,7 +124,7 @@ private:
         }
     }
 
-    static const char* reasonPhrase( int statusCode )
+    static const char* reason_phrase( int statusCode )
     {
         if ( statusCode >= 200 && statusCode < 300 )
             return "OK";
@@ -135,7 +135,7 @@ private:
         return "Status";
     }
 
-    void serveLoop()
+    void serve_loop()
     {
         while ( running_.load() )
         {
@@ -162,7 +162,7 @@ private:
 
             const std::string headers =
                 "HTTP/1.1 " + std::to_string( scripted.statusCode ) + " "
-                + reasonPhrase( scripted.statusCode ) + "\r\n"
+                + reason_phrase( scripted.statusCode ) + "\r\n"
                 + "Content-Type: application/json\r\n"
                 + "Content-Length: " + std::to_string( scripted.body.size() ) + "\r\n"
                 + "Connection: close\r\n\r\n";
@@ -188,14 +188,14 @@ private:
 
 TEST( AuthClient, RegisterSuccessReturnsPositiveResult )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
 
     LocalMockHttpServer server(
         {LocalMockHttpServer::ScriptedResponse{201, R"({"ok":true})"}} );
-    angry::AuthClient client( server.baseUrl() );
+    angry::AuthClient client( server.base_url() );
 
     const angry::AuthResult result = client.registerUser( "alex", "123456" );
     EXPECT_TRUE( result.success );
@@ -205,7 +205,7 @@ TEST( AuthClient, RegisterSuccessReturnsPositiveResult )
 
 TEST( AuthClient, LoginSuccessReturnsTokenAndUsername )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
@@ -213,7 +213,7 @@ TEST( AuthClient, LoginSuccessReturnsTokenAndUsername )
     LocalMockHttpServer server(
         {LocalMockHttpServer::ScriptedResponse{
             200, R"({"token":"jwt-token-123","username":"alex"})"}} );
-    angry::AuthClient client( server.baseUrl() );
+    angry::AuthClient client( server.base_url() );
 
     const angry::AuthResult result = client.loginUser( "alex", "123456" );
     EXPECT_TRUE( result.success );
@@ -224,7 +224,7 @@ TEST( AuthClient, LoginSuccessReturnsTokenAndUsername )
 
 TEST( AuthClient, LoginWrongPasswordFailsGracefully )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
@@ -232,7 +232,7 @@ TEST( AuthClient, LoginWrongPasswordFailsGracefully )
     LocalMockHttpServer server(
         {LocalMockHttpServer::ScriptedResponse{
             401, R"({"error":"invalid username or password"})"}} );
-    angry::AuthClient client( server.baseUrl() );
+    angry::AuthClient client( server.base_url() );
 
     const angry::AuthResult result = client.loginUser( "alex", "bad-pass" );
     EXPECT_FALSE( result.success );

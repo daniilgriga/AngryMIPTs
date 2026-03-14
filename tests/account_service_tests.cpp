@@ -23,7 +23,7 @@ namespace
 
 // #=# Test Helpers #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
-std::filesystem::path makeTempSessionPath()
+std::filesystem::path make_temp_session_path()
 {
     const auto now = std::chrono::steady_clock::now().time_since_epoch().count();
     return std::filesystem::temp_directory_path()
@@ -34,7 +34,7 @@ class TempSessionFile
 {
 public:
     TempSessionFile()
-        : path_( makeTempSessionPath() )
+        : path_( make_temp_session_path() )
     {
     }
 
@@ -49,7 +49,7 @@ public:
         return path_;
     }
 
-    std::string pathString() const
+    std::string path_string() const
     {
         return path_.string();
     }
@@ -64,13 +64,13 @@ private:
 
 TEST( AccountService, LoadSessionExposesLoggedInState )
 {
-    TempSessionFile temp;
+    TempSessionFile temp_file;
     {
-        std::ofstream out( temp.path() );
+        std::ofstream out( temp_file.path() );
         out << R"({"token":"jwt-token","username":"alex"})";
     }
 
-    angry::AccountService service( temp.pathString(), "http://127.0.0.1:1" );
+    angry::AccountService service( temp_file.path_string(), "http://127.0.0.1:1" );
     service.loadSession();
 
     EXPECT_TRUE( service.isLoggedIn() );
@@ -80,19 +80,19 @@ TEST( AccountService, LoadSessionExposesLoggedInState )
 
 TEST( AccountService, LogoutClearsSessionFileAndState )
 {
-    TempSessionFile temp;
+    TempSessionFile temp_file;
     {
-        std::ofstream out( temp.path() );
+        std::ofstream out( temp_file.path() );
         out << R"({"token":"jwt-token","username":"alex"})";
     }
 
-    angry::AccountService service( temp.pathString(), "http://127.0.0.1:1" );
+    angry::AccountService service( temp_file.path_string(), "http://127.0.0.1:1" );
     service.loadSession();
     ASSERT_TRUE( service.isLoggedIn() );
 
     service.logout();
 
-    EXPECT_FALSE( std::filesystem::exists( temp.path() ) );
+    EXPECT_FALSE( std::filesystem::exists( temp_file.path() ) );
     EXPECT_FALSE( service.isLoggedIn() );
     EXPECT_TRUE( service.token().empty() );
     EXPECT_TRUE( service.username().empty() );
@@ -100,8 +100,8 @@ TEST( AccountService, LogoutClearsSessionFileAndState )
 
 TEST( AccountService, SubmitScoreWithoutLoginSkipsOnlineSubmission )
 {
-    TempSessionFile temp;
-    angry::AccountService service( temp.pathString(), "http://127.0.0.1:1" );
+    TempSessionFile temp_file;
+    angry::AccountService service( temp_file.path_string(), "http://127.0.0.1:1" );
     service.loadSession();
     ASSERT_FALSE( service.isLoggedIn() );
 
@@ -111,13 +111,13 @@ TEST( AccountService, SubmitScoreWithoutLoginSkipsOnlineSubmission )
 
 TEST( AccountService, LoginServerUnavailableDoesNotPersistSession )
 {
-    TempSessionFile temp;
-    angry::AccountService service( temp.pathString(), "http://127.0.0.1:1" );
+    TempSessionFile temp_file;
+    angry::AccountService service( temp_file.path_string(), "http://127.0.0.1:1" );
 
     const angry::AuthResult result = service.login( "alex", "123456" );
     EXPECT_FALSE( result.success );
 
     service.loadSession();
     EXPECT_FALSE( service.isLoggedIn() );
-    EXPECT_FALSE( std::filesystem::exists( temp.path() ) );
+    EXPECT_FALSE( std::filesystem::exists( temp_file.path() ) );
 }

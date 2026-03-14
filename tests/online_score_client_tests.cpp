@@ -32,7 +32,7 @@ namespace
 
 // #=# Test Helpers & Mock Server #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
-bool canBindLoopbackSocket()
+bool can_bind_loopback_socket()
 {
     const int fd = ::socket( AF_INET, SOCK_STREAM, 0 );
     if ( fd < 0 )
@@ -95,7 +95,7 @@ public:
         port_ = ntohs( boundAddr.sin_port );
 
         running_.store( true );
-        worker_ = std::thread( [this]() { this->serveLoop(); } );
+        worker_ = std::thread( [this]() { this->serve_loop(); } );
     }
 
     ~LocalMockHttpServer()
@@ -111,23 +111,23 @@ public:
         return port_;
     }
 
-    std::string baseUrl() const
+    std::string base_url() const
     {
         return "http://127.0.0.1:" + std::to_string( port_ );
     }
 
-    int requestCount() const
+    int request_count() const
     {
         return requestCount_.load();
     }
 
-    std::vector<std::string> requestTargets() const
+    std::vector<std::string> request_targets() const
     {
         std::lock_guard<std::mutex> lock( requestsMutex_ );
         return requestTargets_;
     }
 
-    std::vector<std::string> rawRequests() const
+    std::vector<std::string> raw_requests() const
     {
         std::lock_guard<std::mutex> lock( requestsMutex_ );
         return rawRequests_;
@@ -150,7 +150,7 @@ private:
         }
     }
 
-    static const char* reasonPhrase( int statusCode )
+    static const char* reason_phrase( int statusCode )
     {
         if ( statusCode >= 200 && statusCode < 300 )
             return "OK";
@@ -161,7 +161,7 @@ private:
         return "Status";
     }
 
-    void serveLoop()
+    void serve_loop()
     {
         while ( running_.load() )
         {
@@ -202,7 +202,7 @@ private:
 
             const std::string payload = scripted.body;
             const std::string headers =
-                "HTTP/1.1 " + std::to_string( scripted.statusCode ) + " " + reasonPhrase( scripted.statusCode ) + "\r\n"
+                "HTTP/1.1 " + std::to_string( scripted.statusCode ) + " " + reason_phrase( scripted.statusCode ) + "\r\n"
                 "Content-Type: application/json\r\n"
                 "Content-Length: " + std::to_string( payload.size() ) + "\r\n"
                 "Connection: close\r\n\r\n";
@@ -232,26 +232,26 @@ private:
 
 TEST( OnlineScoreClient, SubmitScoreReturnsTrueOn2xx )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
 
     LocalMockHttpServer server( {LocalMockHttpServer::ScriptedResponse{201, R"({"ok":true})"}} );
-    angry::OnlineScoreClient client( server.baseUrl() );
+    angry::OnlineScoreClient client( server.base_url() );
 
     const bool ok = client.submitScore( "Alice", 7, 1234, 3 );
     EXPECT_TRUE( ok );
-    EXPECT_EQ( server.requestCount(), 1 );
+    EXPECT_EQ( server.request_count(), 1 );
 
-    const auto targets = server.requestTargets();
+    const auto targets = server.request_targets();
     ASSERT_FALSE( targets.empty() );
     EXPECT_NE( targets.front().find( "/scores" ), std::string::npos );
 }
 
 TEST( OnlineScoreClient, FetchLeaderboardParsesValidArray )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
@@ -260,7 +260,7 @@ TEST( OnlineScoreClient, FetchLeaderboardParsesValidArray )
         {LocalMockHttpServer::ScriptedResponse{
             200,
             R"([{"playerName":"Alice","score":1200,"stars":3},{"playerName":"Bob","score":900,"stars":2}])"}} );
-    angry::OnlineScoreClient client( server.baseUrl() );
+    angry::OnlineScoreClient client( server.base_url() );
 
     const auto entries = client.fetchLeaderboard( 3 );
     ASSERT_EQ( entries.size(), 2u );
@@ -271,29 +271,29 @@ TEST( OnlineScoreClient, FetchLeaderboardParsesValidArray )
     EXPECT_EQ( entries[1].score, 900 );
     EXPECT_EQ( entries[1].stars, 2 );
 
-    const auto targets = server.requestTargets();
+    const auto targets = server.request_targets();
     ASSERT_FALSE( targets.empty() );
     EXPECT_NE( targets.front().find( "/leaderboard?levelId=3" ), std::string::npos );
 }
 
 TEST( OnlineScoreClient, FetchLeaderboardReturnsEmptyOnInvalidJson )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
 
     LocalMockHttpServer server( {LocalMockHttpServer::ScriptedResponse{200, "not-a-json"}} );
-    angry::OnlineScoreClient client( server.baseUrl() );
+    angry::OnlineScoreClient client( server.base_url() );
 
     const auto entries = client.fetchLeaderboard( 2 );
     EXPECT_TRUE( entries.empty() );
-    EXPECT_EQ( server.requestCount(), 1 );
+    EXPECT_EQ( server.request_count(), 1 );
 }
 
 TEST( OnlineScoreClient, SubmitScoreRetriesOn5xxAndFails )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
@@ -303,16 +303,16 @@ TEST( OnlineScoreClient, SubmitScoreRetriesOn5xxAndFails )
         LocalMockHttpServer::ScriptedResponse{503, R"({"error":"temporary"})"},
         LocalMockHttpServer::ScriptedResponse{503, R"({"error":"temporary"})"},
     } );
-    angry::OnlineScoreClient client( server.baseUrl() );
+    angry::OnlineScoreClient client( server.base_url() );
 
     const bool ok = client.submitScore( "Retry", 1, 10, 1 );
     EXPECT_FALSE( ok );
-    EXPECT_EQ( server.requestCount(), 3 );
+    EXPECT_EQ( server.request_count(), 3 );
 }
 
 TEST( OnlineScoreClient, FetchLeaderboardRetriesOn5xxAndFails )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
@@ -322,11 +322,11 @@ TEST( OnlineScoreClient, FetchLeaderboardRetriesOn5xxAndFails )
         LocalMockHttpServer::ScriptedResponse{500, R"({"error":"temporary"})"},
         LocalMockHttpServer::ScriptedResponse{500, R"({"error":"temporary"})"},
     } );
-    angry::OnlineScoreClient client( server.baseUrl() );
+    angry::OnlineScoreClient client( server.base_url() );
 
     const auto entries = client.fetchLeaderboard( 5 );
     EXPECT_TRUE( entries.empty() );
-    EXPECT_EQ( server.requestCount(), 3 );
+    EXPECT_EQ( server.request_count(), 3 );
 }
 
 TEST( OnlineScoreClient, SubmitScoreReturnsFalseOnConnectionFailure )
@@ -339,23 +339,23 @@ TEST( OnlineScoreClient, SubmitScoreReturnsFalseOnConnectionFailure )
 
 TEST( OnlineScoreClient, SubmitScoreWithTokenSendsBearerHeader )
 {
-    if ( !canBindLoopbackSocket() )
+    if ( !can_bind_loopback_socket() )
     {
         GTEST_SKIP() << "Loopback bind is unavailable in this environment.";
     }
 
     LocalMockHttpServer server( {LocalMockHttpServer::ScriptedResponse{201, R"({"ok":true})"}} );
-    angry::OnlineScoreClient client( server.baseUrl() );
+    angry::OnlineScoreClient client( server.base_url() );
 
     const bool ok = client.submitScoreWithToken( "jwt-token-xyz", 7, 4000, 2 );
     EXPECT_TRUE( ok );
-    EXPECT_EQ( server.requestCount(), 1 );
+    EXPECT_EQ( server.request_count(), 1 );
 
-    const auto targets = server.requestTargets();
+    const auto targets = server.request_targets();
     ASSERT_FALSE( targets.empty() );
     EXPECT_NE( targets.front().find( "/scores" ), std::string::npos );
 
-    const auto raws = server.rawRequests();
+    const auto raws = server.raw_requests();
     ASSERT_FALSE( raws.empty() );
     EXPECT_NE( raws.front().find( "Authorization: Bearer jwt-token-xyz" ), std::string::npos );
 }
