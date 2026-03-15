@@ -1,12 +1,16 @@
 # AngryMipts
 
+<div align="center">
+
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-blue?logo=cplusplus)
 ![SFML 3](https://img.shields.io/badge/SFML-3.0-green?logo=sfml)
 ![Box2D 3.0](https://img.shields.io/badge/Box2D-3.0.0-orange)
 ![CMake](https://img.shields.io/badge/CMake-3.20+-blue?logo=cmake)
 ![Multithreaded](https://img.shields.io/badge/threading-multithreaded-purple)
 ![Cross-Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Web-lightgrey)
-<!--![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-red) -->
+[![License: BUSL-1.1](https://img.shields.io/badge/License-BUSL--1.1-blue.svg)](LICENSE)
+
+</div>
 
 ![battlefield](img/img1.png)
 
