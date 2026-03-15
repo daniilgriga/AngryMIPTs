@@ -161,61 +161,7 @@ The codebase targets two completely different runtimes — native desktop via **
 
 ### Inheritance Graph
 
-```mermaid
-classDiagram
-    class Scene {
-        <<abstract>>
-        +init()
-        +update(dt)
-        +render(target)
-        +on_event(event)
-    }
-    Scene <|-- GameScene
-    Scene <|-- MenuScene
-    Scene <|-- LoginScene
-    Scene <|-- LevelSelectScene
-    Scene <|-- ResultScene
-
-    class PhysicsRuntime {
-        +start()
-        +stop()
-        +push_command(cmd)
-        +drain_events()
-        +get_snapshot()
-    }
-    PhysicsRuntime o-- PhysicsEngine
-    PhysicsRuntime o-- PhysicsThread
-    PhysicsRuntime o-- ThreadSafeQueue
-
-    class PhysicsThread {
-        +worker_loop()
-        -stop_cv_
-    }
-    PhysicsThread o-- PhysicsEngine
-
-    class AccountService {
-        +bootstrap()
-        +login(url, user, pass)
-        +register_user(url, user, pass)
-        +logout()
-        +get_session()
-    }
-    AccountService o-- AuthClient
-    AccountService o-- SessionManager
-    AccountService o-- OnlineScoreClient
-
-    class ThreadSafeQueue~T~ {
-        +push(item)
-        +try_pop() T
-        +drain_events()
-    }
-
-    class WorldSnapshot {
-        +bodies[]
-        +projectiles[]
-        +targets[]
-    }
-```
+![inhgraph](img/class_diagram.png)
 
 ### Key Class Responsibilities
 
