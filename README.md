@@ -29,6 +29,7 @@ The codebase targets two completely different runtimes — native desktop via **
 ## Features
 
 ### Gameplay
+
 - **9 projectile types** with unique special abilities activated mid-flight
 - **4 destructible block materials**: Wood, Stone, Glass, Ice — each with distinct durability
 - **3 block shapes**: Rect, Circle, Triangle (triangle geometry driven by exact vertex data from the snapshot)
@@ -38,6 +39,7 @@ The codebase targets two completely different runtimes — native desktop via **
 - **Online leaderboard** per level with JWT-authenticated score submission
 
 ### Technical
+
 - Multithreaded physics at fixed 60 Hz, rendered asynchronously from the main thread
 - Double-buffered `WorldSnapshot` — render reads one buffer while physics writes the other
 - `ThreadSafeQueue<Command>` (non-blocking `try_pop`) and `ThreadSafeQueue<Event>` (`drain_events`) for zero-coupling inter-thread communication
@@ -56,17 +58,27 @@ The codebase targets two completely different runtimes — native desktop via **
 
 ---
 
-## Demo / Screenshots
+## Screenshots
 
-<!-- SCREENSHOT: Main menu screen showing the game title, Play button, Login/Register button, and decorative background -->
+**Main / Login**
 
-<!-- SCREENSHOT: Level select screen showing a grid of 18 level cards, each with a lock/star state, and an embedded leaderboard panel showing top scores for the currently highlighted level -->
+![Main/Login screen](img/login_screen.png)
 
-<!-- SCREENSHOT: Mid-gameplay showing an in-flight projectile arcing toward a mixed Wood/Stone structure, with a pig target visible behind the blocks, shot counter and current score displayed in the HUD -->
+**Level Select**
 
-<!-- SCREENSHOT: Destruction moment — blocks and debris scattering after a heavy impact, particle effects visible, a target being destroyed with a score popup -->
+![Level select screen](img/level_choosing_screen.png)
 
-<!-- SCREENSHOT: Result screen showing final score, 1-3 stars earned, breakdown of score vs thresholds, and a "Next Level" / "Retry" button -->
+**Mid-Gameplay**
+
+![Mid-gameplay with in-flight projectile](img/flying_bird_screen-.png)
+
+**Destruction Moment**
+
+![Destruction moment with debris and score popup](img/boom_moment_screen.png)
+
+**Result Screen**
+
+![Result screen with final score and stars](img/level_end_screen.png)
 
 ---
 
