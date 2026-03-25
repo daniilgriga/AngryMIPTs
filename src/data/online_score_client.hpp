@@ -44,7 +44,7 @@ struct LeaderboardFetchResult
 class OnlineScoreClient
 {
 public:
-    explicit OnlineScoreClient(std::string base_url = "");
+    explicit OnlineScoreClient(std::string base_url = "https://api.angrymipts.ru");
 
     // Legacy API kept for transitional compatibility.
     // For JWT backend use submit_score_with_token(...).
