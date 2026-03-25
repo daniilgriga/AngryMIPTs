@@ -400,7 +400,7 @@ struct Window
     const View& getDefaultView() const { return default_view_; }
     Vec2f mapPixelToCoords( Vec2i pixel, const View& view ) const;
 
-    Vec2u getSize() const { return { unsigned(GetScreenWidth()), unsigned(GetScreenHeight()) }; }
+    Vec2u getSize() const { return { unsigned(w_), unsigned(h_) }; }
 
     void draw( const RectShape& shape );
     void draw( const CircleShape& shape );

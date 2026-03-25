@@ -110,12 +110,15 @@
       overflow: hidden;
       background: #000;
       box-shadow: 0 14px 38px var(--shadow);
+      max-width: 100%;
     }
 
     canvas {
-      width: 100%;
-      height: auto;
+      width: 1280px;
+      height: 720px;
+      max-width: 100%;
       display: block;
+      margin: 0 auto;
       background: #000;
       image-rendering: auto;
       outline: none;
@@ -278,7 +281,18 @@
       }
     };
 
-    canvasEl.addEventListener('pointerdown', focusCanvas);
+    // Polyfill: Raylib calls deprecated Element.setCapture(),
+    // redirect to setPointerCapture for correct drag behavior.
+    if (!Element.prototype.setCapture) {
+      Element.prototype.setCapture = function() {
+        // no-op fallback — Raylib handles this via pointerdown
+      };
+    }
+
+    canvasEl.addEventListener('pointerdown', function(e) {
+      focusCanvas();
+      canvasEl.setPointerCapture(e.pointerId);
+    });
     fullscreenBtn.addEventListener('click', requestFullscreenSafe);
     window.addEventListener('keydown', function(event) {
       const isFullscreenHotkey = event.key === 'F11' || (event.key === 'Enter' && event.altKey);

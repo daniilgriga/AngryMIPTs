@@ -30,7 +30,7 @@ namespace
 using Json = nlohmann::json;
 
 constexpr int kAuthTimeoutMs = 3000;
-constexpr const char* kDefaultBackendUrl = "http://84.201.138.107:8080";
+constexpr const char* kDefaultBackendUrl = "https://api.angrymipts.ru";
 constexpr const char* kBackendUrlEnvVar = "ANGRY_BACKEND_URL";
 
 bool starts_with( const std::string& value, const char* prefix )
