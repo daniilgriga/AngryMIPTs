@@ -83,7 +83,7 @@ private:
     PhysicsRuntime physics_;
     ThreadSafeQueue<Command> command_queue_;
     LevelLoader level_loader_;
-    OnlineScoreClient online_score_client_;
+    OnlineScoreClient online_score_client_ { "https://api.angrymipts.ru" };
     ScoreSaver score_saver_;
     WorldSnapshot snapshot_;
     platform::Font  font_;
