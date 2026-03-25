@@ -130,6 +130,17 @@ std::string resolve_backend_url( std::string base_url )
     return trim_trailing_slashes( std::move( resolved ) );
 }
 
+std::string build_endpoint_url( std::string base_url, const char* endpoint )
+{
+    base_url = normalize_backend_url( trim_trailing_slashes( std::move( base_url ) ) );
+    if ( base_url.empty() || !has_http_scheme( base_url ) )
+    {
+        base_url = std::string( kDefaultBackendUrl );
+    }
+
+    return trim_trailing_slashes( std::move( base_url ) ) + endpoint;
+}
+
 bool should_retry_request( const platform::http::Response& response )
 {
     if ( response.network_error )
@@ -299,7 +310,7 @@ bool OnlineScoreClient::submit_score(
         [&]()
         {
             return platform::http::post(
-                base_url_ + "/scores",
+                build_endpoint_url( base_url_, "/scores" ),
                 body.dump(),
                 platform::http::Headers {
                     {"Content-Type", "application/json"},
@@ -357,7 +368,7 @@ bool OnlineScoreClient::submit_score_with_token(
         [&]()
         {
             return platform::http::post(
-                base_url_ + "/scores",
+                build_endpoint_url( base_url_, "/scores" ),
                 body.dump(),
                 platform::http::Headers {
                     {"Content-Type", "application/json"},
@@ -393,7 +404,7 @@ LeaderboardFetchResult OnlineScoreClient::fetch_leaderboard_with_status(int leve
         [&]()
         {
             return platform::http::get(
-                base_url_ + "/leaderboard",
+                build_endpoint_url( base_url_, "/leaderboard" ),
                 platform::http::QueryParams {
                     {"levelId", std::to_string( level_id )},
                 },
@@ -441,7 +452,8 @@ void OnlineScoreClient::submit_score_with_token_async(
             base_url_ );
     }
 
-    const std::string submit_url = base_url_ + "/scores";
+    const std::string submit_url = build_endpoint_url( base_url_, "/scores" );
+    Logger::info( "OnlineScoreClient::submit_score_with_token_async url={}", submit_url );
     const json body = {
         {"levelId", level_id},
         {"score", score},
@@ -497,7 +509,7 @@ void OnlineScoreClient::fetch_leaderboard_with_status_async(
         return;
     }
 
-    const std::string leaderboard_url = base_url_ + "/leaderboard";
+    const std::string leaderboard_url = build_endpoint_url( base_url_, "/leaderboard" );
     platform::http::get_async(
         leaderboard_url,
         platform::http::QueryParams {
