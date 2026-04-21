@@ -104,6 +104,12 @@ void SceneManager::update()
         {
             result->set_result ( game->get_last_result() );
         }
+        if ( game )
+        {
+            const SceneId next = game->poll_pending_scene();
+            if ( next == SceneId::Login )
+                switch_to ( SceneId::Login );
+        }
     }
 }
 
