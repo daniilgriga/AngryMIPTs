@@ -336,7 +336,7 @@ bool OnlineScoreClient::submit_score(
     return true;
 }
 
-bool OnlineScoreClient::submit_score_with_token(
+ScoreSubmitStatus OnlineScoreClient::submit_score_with_token(
     const std::string& token,
     int level_id,
     int score,
@@ -345,7 +345,7 @@ bool OnlineScoreClient::submit_score_with_token(
     if ( token.empty() )
     {
         Logger::info( "User is not logged in, skipping online score submission" );
-        return false;
+        return ScoreSubmitStatus::Failed;
     }
 
     if ( is_insecure_non_local_url( base_url_ ) )
@@ -380,7 +380,13 @@ bool OnlineScoreClient::submit_score_with_token(
     if ( response.network_error )
     {
         Logger::error( "OnlineScoreClient::submit_score_with_token failed after retries." );
-        return false;
+        return ScoreSubmitStatus::Failed;
+    }
+
+    if ( response.status_code == 401 )
+    {
+        Logger::info( "OnlineScoreClient::submit_score_with_token: session expired (401)" );
+        return ScoreSubmitStatus::Unauthorized;
     }
 
     if ( !platform::http::is_http_ok( response ) )
@@ -388,11 +394,11 @@ bool OnlineScoreClient::submit_score_with_token(
         Logger::error(
             "OnlineScoreClient::submit_score_with_token failed: final http status={}",
             response.status_code );
-        return false;
+        return ScoreSubmitStatus::Failed;
     }
 
     Logger::info( "OnlineScoreClient::submit_score_with_token success." );
-    return true;
+    return ScoreSubmitStatus::Ok;
 }
 
 // #=# Leaderboard API #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
@@ -425,7 +431,7 @@ void OnlineScoreClient::submit_score_with_token_async(
     int level_id,
     int score,
     int stars,
-    std::function<void(bool)> on_done ) const
+    std::function<void(ScoreSubmitStatus)> on_done ) const
 {
 #ifndef __EMSCRIPTEN__
     if ( on_done )
@@ -441,7 +447,7 @@ void OnlineScoreClient::submit_score_with_token_async(
     if ( token.empty() )
     {
         Logger::info( "User is not logged in, skipping online score submission" );
-        on_done( false );
+        on_done( ScoreSubmitStatus::Failed );
         return;
     }
 
@@ -475,7 +481,14 @@ void OnlineScoreClient::submit_score_with_token_async(
                 Logger::error(
                     "OnlineScoreClient::submit_score_with_token failed: network error: {}",
                     response.error_message );
-                on_done( false );
+                on_done( ScoreSubmitStatus::Failed );
+                return;
+            }
+
+            if ( response.status_code == 401 )
+            {
+                Logger::info( "OnlineScoreClient::submit_score_with_token: session expired (401)" );
+                on_done( ScoreSubmitStatus::Unauthorized );
                 return;
             }
 
@@ -484,12 +497,12 @@ void OnlineScoreClient::submit_score_with_token_async(
                 Logger::error(
                     "OnlineScoreClient::submit_score_with_token failed: final http status={}",
                     response.status_code );
-                on_done( false );
+                on_done( ScoreSubmitStatus::Failed );
                 return;
             }
 
             Logger::info( "OnlineScoreClient::submit_score_with_token success." );
-            on_done( true );
+            on_done( ScoreSubmitStatus::Ok );
         } );
 #endif
 }

@@ -104,6 +104,7 @@ private:
         std::vector<LeaderboardEntry> ready_entries;
         LeaderboardFetchStatus ready_status = LeaderboardFetchStatus::Unavailable;
         bool ready = false;
+        bool session_expired = false;
     };
     std::shared_ptr<LeaderboardAsyncState> leaderboard_async_state_ =
         std::make_shared<LeaderboardAsyncState>();

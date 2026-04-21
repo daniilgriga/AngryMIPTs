@@ -81,6 +81,12 @@ void AccountService::logout()
     sessionManager_.clear_session();
 }
 
+void AccountService::on_session_expired()
+{
+    Logger::info( "Session expired: clearing local session" );
+    sessionManager_.clear_session();
+}
+
 // #=# Leaderboard API #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
 bool AccountService::submit_score_if_logged_in( int levelId, int score, int stars )
@@ -91,8 +97,11 @@ bool AccountService::submit_score_if_logged_in( int levelId, int score, int star
         return false;
     }
 
-    return onlineScoreClient_.submit_score_with_token(
+    const ScoreSubmitStatus status = onlineScoreClient_.submit_score_with_token(
         sessionManager_.token(), levelId, score, stars );
+    if ( status == ScoreSubmitStatus::Unauthorized )
+        on_session_expired();
+    return status == ScoreSubmitStatus::Ok;
 }
 
 LeaderboardFetchResult AccountService::fetch_leaderboard_with_status( int levelId )
