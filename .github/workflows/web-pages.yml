@@ -35,11 +35,15 @@ jobs:
       - name: Prepare Pages artifact
         run: |
           rm -rf pages-dist
-          mkdir -p pages-dist
-          cp build_web/AngryMipts.html pages-dist/index.html
+          mkdir -p pages-dist/img
+          cp web/index.html pages-dist/index.html
+          cp build_web/AngryMipts.html pages-dist/play.html
           cp build_web/AngryMipts.js pages-dist/
           cp build_web/AngryMipts.wasm pages-dist/
           cp build_web/AngryMipts.data pages-dist/
+          cp img/img1.png pages-dist/img/
+          cp img/flying_bird_screen-.png pages-dist/img/
+          cp img/boom_moment_screen.png pages-dist/img/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

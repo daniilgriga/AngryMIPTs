@@ -43,6 +43,7 @@ public:
         const std::string& password );
 
     void logout();
+    void on_session_expired();
 
     bool submit_score_if_logged_in( int levelId, int score, int stars );
     LeaderboardFetchResult fetch_leaderboard_with_status( int levelId );

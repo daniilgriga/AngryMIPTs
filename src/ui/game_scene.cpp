@@ -872,9 +872,15 @@ void GameScene::finish_level()
                             score_value,
                             stars_value,
                             auth_token.empty() ? "guest" : "logged-in" );
-                        const bool submit_ok = client.submit_score_with_token (
+                        const ScoreSubmitStatus submit_status = client.submit_score_with_token (
                             auth_token, level_id, score_value, stars_value );
-                        if ( !submit_ok )
+                        if ( submit_status == ScoreSubmitStatus::Unauthorized )
+                        {
+                            Logger::info ( "GameScene: session expired during submit" );
+                            std::lock_guard<std::mutex> lock ( async_state->mutex );
+                            async_state->session_expired = true;
+                        }
+                        else if ( submit_status != ScoreSubmitStatus::Ok )
                         {
                             Logger::info (
                                 "GameScene: backend submit failed, trying to load leaderboard anyway" );
@@ -949,10 +955,17 @@ void GameScene::finish_level()
                 score_value,
                 stars_value,
                 [client = std::move ( client ),
+                 async_state,
                  level_id,
-                 publish_result = std::move ( publish_result )] ( bool submit_ok ) mutable
+                 publish_result = std::move ( publish_result )] ( ScoreSubmitStatus submit_status ) mutable
                 {
-                    if ( !submit_ok )
+                    if ( submit_status == ScoreSubmitStatus::Unauthorized )
+                    {
+                        Logger::info ( "GameScene(web): session expired during submit" );
+                        std::lock_guard<std::mutex> lock ( async_state->mutex );
+                        async_state->session_expired = true;
+                    }
+                    else if ( submit_status != ScoreSubmitStatus::Ok )
                     {
                         Logger::info (
                             "GameScene(web): backend submit failed, still fetching leaderboard" );
@@ -994,6 +1007,17 @@ bool GameScene::poll_result_update()
         return false;
 
     std::lock_guard<std::mutex> lock ( leaderboard_async_state_->mutex );
+
+    if ( leaderboard_async_state_->session_expired )
+    {
+        leaderboard_async_state_->session_expired = false;
+        leaderboard_applied_ = true;
+        if ( accounts_ )
+            accounts_->on_session_expired();
+        pending_scene_ = SceneId::Login;
+        return false;
+    }
+
     if ( !leaderboard_async_state_->ready
          || leaderboard_async_state_->ready_token != pending_result_token_ )
     {

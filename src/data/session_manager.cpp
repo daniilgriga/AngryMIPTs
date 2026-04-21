@@ -7,27 +7,26 @@
 //   * Validates schema and gracefully handles corrupt data
 //   * Clears persisted state on explicit logout
 //   * Emits diagnostic logs for load/save/clear operations
+//
+// Web build: token/username are persisted in browser localStorage
+//   via EM_ASM instead of the local filesystem.
 // ============================================================
 
 #include "data/session_manager.hpp"
 
 #include "data/logger.hpp"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#include <cstdlib>
+#else
 #include <filesystem>
 #include <fstream>
 #include <nlohmann/json.hpp>
+#endif
 
 namespace angry
 {
-
-// #=# Local Helpers #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
-
-namespace
-{
-
-using Json = nlohmann::json;
-
-}  // namespace
 
 // #=# Construction #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
@@ -37,6 +36,89 @@ SessionManager::SessionManager( std::string filepath )
 }
 
 // #=# Session Persistence API #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
+
+#ifdef __EMSCRIPTEN__  // Web — localStorage
+
+namespace
+{
+
+constexpr const char* kTokenKey    = "angry_session_token";
+constexpr const char* kUsernameKey = "angry_session_username";
+
+std::string ls_get( const char* key )
+{
+    char* raw = reinterpret_cast<char*>( EM_ASM_PTR(
+    {
+        var val = localStorage.getItem( UTF8ToString( $0 ) );
+        if ( val === null || val === undefined ) return 0;
+        var len = lengthBytesUTF8( val ) + 1;
+        var buf = _malloc( len );
+        stringToUTF8( val, buf, len );
+        return buf;
+    }, key ) );
+
+    if ( !raw ) return {};
+    std::string result( raw );
+    std::free( raw );
+    return result;
+}
+
+}  // namespace
+
+void SessionManager::load_session()
+{
+    token_.clear();
+    username_.clear();
+
+    token_    = ls_get( kTokenKey );
+    username_ = ls_get( kUsernameKey );
+
+    if ( token_.empty() || username_.empty() )
+    {
+        token_.clear();
+        username_.clear();
+        Logger::info( "Session loaded: empty (no localStorage data)" );
+        return;
+    }
+
+    Logger::info( "Session loaded: user={}", username_ );
+}
+
+void SessionManager::save_session() const
+{
+    EM_ASM(
+    {
+        try { localStorage.setItem( UTF8ToString( $0 ), UTF8ToString( $1 ) ); } catch(e) {}
+        try { localStorage.setItem( UTF8ToString( $2 ), UTF8ToString( $3 ) ); } catch(e) {}
+    },
+    kTokenKey, token_.c_str(), kUsernameKey, username_.c_str() );
+
+    Logger::info( "Session saved: user={}", username_ );
+}
+
+void SessionManager::clear_session()
+{
+    token_.clear();
+    username_.clear();
+
+    EM_ASM(
+    {
+        try { localStorage.removeItem( UTF8ToString( $0 ) ); } catch(e) {}
+        try { localStorage.removeItem( UTF8ToString( $1 ) ); } catch(e) {}
+    },
+    kTokenKey, kUsernameKey );
+
+    Logger::info( "Session cleared" );
+}
+
+#else  // Native — filesystem
+
+namespace
+{
+
+using Json = nlohmann::json;
+
+}  // namespace
 
 void SessionManager::load_session()
 {
@@ -170,6 +252,8 @@ void SessionManager::clear_session()
         Logger::error( "Session clear failed for {}: {}", filepath_, e.what() );
     }
 }
+
+#endif  // __EMSCRIPTEN__
 
 // #=# Accessors / Mutators #=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#
 
