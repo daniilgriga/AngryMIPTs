@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AngryMipts &mdash; Physics-Based Chaos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #0d1018;
+  --bg2:     #141824;
+  --bg3:     #1b2135;
+  --amber:   #f5a623;
+  --coral:   #e8835a;
+  --green:   #52b788;
+  --text:    #ede8e0;
+  --text2:   #8a93a8;
+  --text3:   #4d566a;
+  --r:       14px;
+  --r-sm:    8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.5;
+}
+
+/* NAV */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 clamp(1.5rem, 5vw, 4rem);
+  height: 64px;
+  background: linear-gradient(to bottom, rgba(13,16,24,0.95), transparent);
+  backdrop-filter: blur(0px);
+  transition: backdrop-filter 0.3s, background 0.3s;
+}
+nav.scrolled {
+  background: rgba(13,16,24,0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.nav-logo {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800; font-size: 1.15rem;
+  color: var(--text); letter-spacing: -0.02em;
+}
+.nav-logo span { color: var(--amber); }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a {
+  color: var(--text2); text-decoration: none; font-size: 0.875rem;
+  font-weight: 500; transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  background: var(--amber); color: #0d1018;
+  padding: 0.5rem 1.25rem; border-radius: 100px;
+  font-weight: 700; font-size: 0.875rem; text-decoration: none;
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: 'Sora', sans-serif;
+}
+.nav-cta:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(245,166,35,0.35); }
+
+/* HERO */
+#hero {
+  position: relative;
+  height: 100vh; min-height: 600px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  overflow: hidden; text-align: center;
+}
+#hero-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+}
+.hero-content {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1.5rem;
+}
+.hero-eyebrow {
+  font-size: 0.75rem; letter-spacing: 0.18em;
+  color: var(--amber); font-weight: 600; text-transform: uppercase;
+  opacity: 0; animation: fadeUp 0.8s 0.3s forwards;
+}
+.hero-title {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(3.5rem, 11vw, 9rem);
+  font-weight: 800; line-height: 0.92; letter-spacing: -0.04em;
+  color: var(--text);
+  opacity: 0; animation: fadeUp 0.9s 0.5s forwards;
+}
+.hero-title span {
+  background: linear-gradient(135deg, var(--amber) 0%, var(--coral) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero-tagline {
+  font-size: clamp(1.05rem, 2.5vw, 1.35rem);
+  color: var(--text2); font-weight: 300; letter-spacing: 0.01em;
+  opacity: 0; animation: fadeUp 0.9s 0.7s forwards;
+}
+.hero-actions {
+  display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; justify-content: center;
+  opacity: 0; animation: fadeUp 0.9s 0.9s forwards;
+  margin-top: 0.5rem;
+}
+.btn-primary {
+  background: var(--amber); color: #0d1018;
+  padding: 0.85rem 2.25rem; border-radius: 100px;
+  font-family: 'Sora', sans-serif; font-weight: 700; font-size: 1rem;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 0.5rem;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 0 40px rgba(245,166,35,0.2);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 40px rgba(245,166,35,0.45); }
+.btn-ghost {
+  color: var(--text2); font-size: 0.9rem; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  transition: color 0.2s;
+}
+.btn-ghost:hover { color: var(--text); }
+.scroll-hint {
+  position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+  z-index: 2; animation: bounce 2s 1.5s infinite; opacity: 0.4;
+}
+.scroll-hint svg { width: 24px; height: 24px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bounce {
+  0%,100% { transform: translateX(-50%) translateY(0); }
+  50%      { transform: translateX(-50%) translateY(6px); }
+}
+
+/* SECTION BASE */
+section { padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 6vw, 5rem); }
+.section-label {
+  font-size: 0.7rem; letter-spacing: 0.2em; color: var(--amber);
+  text-transform: uppercase; font-weight: 600; margin-bottom: 0.75rem;
+}
+.section-title {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(2rem, 4.5vw, 3.25rem);
+  font-weight: 800; letter-spacing: -0.03em;
+  line-height: 1.1; color: var(--text); margin-bottom: 1.25rem;
+}
+.section-sub {
+  font-size: 1.05rem; color: var(--text2);
+  max-width: 52ch; line-height: 1.7; font-weight: 300;
+}
+.reveal {
+  opacity: 0; transform: translateY(28px);
+  transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1), transform 0.7s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal.visible { opacity: 1; transform: none; }
+
+/* ABOUT */
+#about { background: var(--bg2); }
+.about-inner {
+  display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 5rem);
+  align-items: center; max-width: 1200px; margin: 0 auto;
+}
+.about-badges {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.75rem;
+}
+.badge {
+  font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em;
+  padding: 0.35rem 0.85rem; border-radius: 100px;
+  background: rgba(245,166,35,0.1);
+  color: var(--amber); border: 1px solid rgba(245,166,35,0.2);
+}
+.about-visual {
+  aspect-ratio: 16/9; border-radius: var(--r);
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden; position: relative;
+}
+.about-visual img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+/* PROJECTILES */
+#projectiles { background: var(--bg); }
+.projectiles-header { max-width: 1200px; margin: 0 auto 3rem; }
+.projectiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1px; max-width: 1200px; margin: 0 auto;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: var(--r); overflow: hidden;
+}
+.proj-card {
+  background: var(--bg2); padding: 1.5rem;
+  transition: background 0.2s; cursor: default; position: relative; overflow: hidden;
+}
+.proj-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--card-accent, var(--amber));
+  opacity: 0; transition: opacity 0.2s;
+}
+.proj-card:hover { background: var(--bg3); }
+.proj-card:hover::before { opacity: 1; }
+.proj-orb {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--card-accent, var(--amber));
+  margin-bottom: 1rem; opacity: 0.9;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.15rem;
+  box-shadow: 0 0 20px color-mix(in srgb, var(--card-accent, var(--amber)) 30%, transparent);
+}
+.proj-name {
+  font-family: 'Sora', sans-serif; font-weight: 700; font-size: 0.95rem;
+  color: var(--text); margin-bottom: 0.35rem; letter-spacing: -0.01em;
+}
+.proj-desc { font-size: 0.82rem; color: var(--text2); line-height: 1.55; font-weight: 300; }
+
+/* MATERIALS */
+#materials { background: var(--bg2); }
+.materials-inner { max-width: 1200px; margin: 0 auto; }
+.materials-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem;
+  margin-top: 3rem;
+}
+.mat-card {
+  background: var(--bg3); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r); padding: 2rem 1.5rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.mat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+.mat-visual {
+  width: 100%; aspect-ratio: 4/3; border-radius: var(--r-sm); margin-bottom: 1.25rem;
+  display: flex; align-items: center; justify-content: center;
+  gap: 6px; overflow: hidden;
+}
+.mat-block { border-radius: 4px; transition: transform 0.3s; }
+.mat-card:hover .mat-block { transform: rotate(3deg) scale(1.05); }
+.mat-name {
+  font-family: 'Sora', sans-serif; font-weight: 700; font-size: 1.05rem;
+  margin-bottom: 0.35rem; color: var(--text);
+}
+.mat-hp {
+  display: inline-block; font-size: 0.7rem; font-weight: 600;
+  padding: 0.15rem 0.5rem; border-radius: 4px; margin-bottom: 0.6rem;
+  letter-spacing: 0.05em;
+}
+.mat-desc { font-size: 0.82rem; color: var(--text2); line-height: 1.55; font-weight: 300; }
+.shapes-note {
+  margin-top: 2rem; display: flex; align-items: center; gap: 1rem;
+  color: var(--text3); font-size: 0.82rem;
+}
+
+/* HOW TO PLAY */
+#howto { background: var(--bg); }
+.howto-inner { max-width: 1100px; margin: 0 auto; }
+.steps-row {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 0;
+  margin-top: 3.5rem; position: relative;
+}
+.steps-row::before {
+  content: ''; position: absolute; top: 28px; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(to right, transparent, rgba(245,166,35,0.2) 20%, rgba(245,166,35,0.2) 80%, transparent);
+}
+.step {
+  padding: 0 1.5rem; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 1rem;
+}
+.step-num {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--bg2); border: 1.5px solid rgba(245,166,35,0.25);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Sora', sans-serif; font-weight: 800; font-size: 1.1rem;
+  color: var(--amber); position: relative; z-index: 1;
+}
+.step-title {
+  font-family: 'Sora', sans-serif; font-weight: 700; font-size: 0.95rem;
+  color: var(--text); letter-spacing: -0.01em;
+}
+.step-desc { font-size: 0.82rem; color: var(--text2); line-height: 1.6; font-weight: 300; }
+.score-note {
+  margin-top: 3rem; background: var(--bg2);
+  border: 1px solid rgba(255,255,255,0.06); border-radius: var(--r);
+  padding: 1.25rem 1.75rem; display: flex; align-items: center; gap: 1rem;
+  font-size: 0.9rem; color: var(--text2);
+}
+.score-note strong { color: var(--amber); font-weight: 600; }
+
+/* LEVELS */
+#levels { background: var(--bg2); }
+.levels-inner { max-width: 1100px; margin: 0 auto; }
+.levels-grid {
+  display: grid; grid-template-columns: repeat(5,1fr); gap: 0.85rem;
+  margin-top: 3rem;
+}
+.level-tile {
+  aspect-ratio: 1; border-radius: var(--r-sm);
+  background: var(--bg3); border: 1px solid rgba(255,255,255,0.06);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.4rem; cursor: default;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative; overflow: hidden;
+}
+.level-tile.unlocked:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); }
+.level-tile.locked { opacity: 0.35; }
+.level-num {
+  font-family: 'Sora', sans-serif; font-weight: 800; font-size: 1.3rem;
+  color: var(--text);
+}
+.level-stars { display: flex; gap: 2px; }
+.star { font-size: 0.7rem; }
+.star.on { color: var(--amber); }
+.star.off { color: var(--text3); }
+.level-tag {
+  font-size: 0.58rem; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--text3); font-weight: 500;
+}
+.level-tile.active-glow::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit;
+  border: 1.5px solid rgba(245,166,35,0.4);
+  box-shadow: inset 0 0 20px rgba(245,166,35,0.05);
+}
+.levels-note { margin-top: 1.5rem; font-size: 0.85rem; color: var(--text3); text-align: center; }
+
+/* LEADERBOARD */
+#leaderboard { background: var(--bg); }
+.lb-inner {
+  max-width: 1100px; margin: 0 auto;
+  display: grid; grid-template-columns: 1fr 1fr; gap: clamp(2rem, 5vw, 5rem);
+  align-items: start;
+}
+.lb-board {
+  background: var(--bg2); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--r); overflow: hidden;
+}
+.lb-head {
+  padding: 1rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 0.6rem;
+  font-family: 'Sora', sans-serif; font-size: 0.8rem; font-weight: 600;
+  color: var(--text2); letter-spacing: 0.05em;
+}
+.lb-row {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.75rem 1.25rem; border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 0.875rem; transition: background 0.15s;
+}
+.lb-row:hover { background: rgba(255,255,255,0.03); }
+.lb-rank { font-family: 'Sora', sans-serif; font-weight: 700; color: var(--text3); width: 1.5rem; }
+.lb-rank.gold { color: #fbbf24; }
+.lb-rank.silver { color: #94a3b8; }
+.lb-rank.bronze { color: #c97c3a; }
+.lb-name { flex: 1; color: var(--text); font-weight: 400; }
+.lb-score { font-family: 'Sora', sans-serif; font-weight: 700; font-size: 0.8rem; color: var(--amber); }
+.lb-guest { opacity: 0.5; font-style: italic; }
+
+/* FINAL CTA */
+#cta {
+  background: linear-gradient(160deg, var(--bg2) 0%, var(--bg) 100%);
+  text-align: center; padding: clamp(5rem, 10vw, 9rem) 2rem;
+  position: relative; overflow: hidden;
+}
+#cta::before {
+  content: ''; position: absolute; top: -50%; left: -10%; right: -10%; bottom: -50%;
+  background: radial-gradient(ellipse 60% 40% at 50% 50%, rgba(245,166,35,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cta-inner { position: relative; z-index: 1; }
+.cta-title {
+  font-family: 'Sora', sans-serif;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 800; letter-spacing: -0.04em;
+  color: var(--text); margin-bottom: 1rem;
+}
+.cta-sub { font-size: 1.05rem; color: var(--text2); margin-bottom: 2.5rem; font-weight: 300; }
+.btn-xl {
+  background: var(--amber); color: #0d1018;
+  padding: 1.1rem 3rem; border-radius: 100px;
+  font-family: 'Sora', sans-serif; font-weight: 800; font-size: 1.15rem;
+  text-decoration: none; display: inline-flex; align-items: center; gap: 0.6rem;
+  transition: transform 0.15s, box-shadow 0.2s;
+  box-shadow: 0 0 60px rgba(245,166,35,0.25);
+}
+.btn-xl:hover { transform: translateY(-3px); box-shadow: 0 8px 60px rgba(245,166,35,0.5); }
+
+/* FOOTER */
+footer {
+  background: var(--bg); border-top: 1px solid rgba(255,255,255,0.05);
+  padding: 2rem clamp(1.5rem, 6vw, 5rem);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.8rem; color: var(--text3); flex-wrap: wrap; gap: 0.75rem;
+}
+footer span { font-family: 'Sora', sans-serif; font-weight: 700; color: var(--amber); }
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .about-inner { grid-template-columns: 1fr; }
+  .materials-grid { grid-template-columns: repeat(2,1fr); }
+  .lb-inner { grid-template-columns: 1fr; }
+  .steps-row { grid-template-columns: repeat(2,1fr); gap: 2rem; }
+  .steps-row::before { display: none; }
+  nav .nav-links { display: none; }
+}
+@media (max-width: 600px) {
+  .materials-grid { grid-template-columns: 1fr 1fr; }
+  .levels-grid { grid-template-columns: repeat(5,1fr); gap: 0.5rem; }
+  .steps-row { grid-template-columns: 1fr 1fr; }
+  .level-num { font-size: 1rem; }
+}
+@media (max-width: 420px) {
+  .levels-grid { grid-template-columns: repeat(5,1fr); gap: 0.35rem; }
+  .level-num { font-size: 0.9rem; }
+  .star { font-size: 0.55rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="main-nav">
+  <div class="nav-logo">Angry<span>Mipts</span></div>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#projectiles">Projectiles</a></li>
+    <li><a href="#howto">How to Play</a></li>
+    <li><a href="#levels">Levels</a></li>
+  </ul>
+  <a href="./play.html" class="nav-cta">Play Now &#x2192;</a>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <p class="hero-eyebrow">Physics-based projectile game &middot; C++17 &middot; WebAssembly</p>
+    <h1 class="hero-title">Angry<span>Mipts</span></h1>
+    <p class="hero-tagline">Pull. Launch. Destroy.</p>
+    <div class="hero-actions">
+      <a href="./play.html" class="btn-primary">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5l10 5.5-10 5.5V2.5z"/></svg>
+        Play Now
+      </a>
+      <a href="#about" class="btn-ghost">Learn more &darr;</a>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M12 5v14m-5-5 5 5 5-5"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="about-inner">
+    <div class="about-text reveal">
+      <p class="section-label">What is AngryMipts?</p>
+      <h2 class="section-title">A love letter<br>to physics chaos.</h2>
+      <p class="section-sub">Pull back a slingshot, launch projectiles at elaborate structures, and obliterate every target in as few shots as possible. Built entirely in C++ with a custom physics engine, multithreaded architecture, and a full online leaderboard &mdash; now running in your browser via WebAssembly.</p>
+      <div class="about-badges">
+        <span class="badge">Custom Physics Engine</span>
+        <span class="badge">Multithreaded C++17</span>
+        <span class="badge">WebAssembly</span>
+        <span class="badge">Online Leaderboard</span>
+        <span class="badge">9 Unique Projectiles</span>
+      </div>
+    </div>
+    <div class="about-visual reveal" style="transition-delay:0.15s">
+      <img src="./img/img1.png" alt="AngryMipts gameplay screenshot">
+    </div>
+  </div>
+</section>
+
+<!-- PROJECTILES -->
+<section id="projectiles">
+  <div class="projectiles-header reveal">
+    <p class="section-label">Arsenal</p>
+    <h2 class="section-title">9 unique projectiles.</h2>
+    <p class="section-sub">Each with a distinct special ability &mdash; activated mid-flight with a single tap.</p>
+  </div>
+  <div class="projectiles-grid reveal" style="transition-delay:0.1s">
+
+    <div class="proj-card" style="--card-accent:#8ab4f8">
+      <div class="proj-orb">&#9679;</div>
+      <div class="proj-name">Standard</div>
+      <div class="proj-desc">Reliable, balanced mass and velocity. No special ability &mdash; pure skill.</div>
+    </div>
+
+    <div class="proj-card" style="--card-accent:#ef4444">
+      <div class="proj-orb">&#9632;</div>
+      <div class="proj-name">Heavy</div>
+      <div class="proj-desc">2.2&times; density. Devastating on impact, punches through stacked blocks.</div>
+    </div>
+
+    <div class="proj-card" style="--card-accent:#a78bfa">
+      <div class="proj-orb">&#10022;</div>
+      <div class="proj-name">Splitter</div>
+      <div class="proj-desc">Splits into two projectiles on activation, covering a wider blast area.</div>
+    </div>
+
+    <div class="proj-card" style="--card-accent:#22d3ee">
+      <div class="proj-orb">&#9658;</div>
+      <div class="proj-name">Dasher</div>
+      <div class="proj-desc">Activates a sudden speed burst mid-flight &mdash; catches targets off guard.</div>
+    </div>
+
+    <div class="proj-card" style="--card-accent:#f97316">
+      <div class="proj-orb">&#9733;</div>
+      <div class="proj-name">Bomber</div>
+      <div class="proj-desc">Explodes on command with a radial blast that pushes everything nearby.</div>
+    </div>
+
+    <div class="proj-card" style="--card-accent:#34d399">
+      <div class="proj-orb">&#9660;</div>
+      <div class="proj-name">Dropper</div>
+      <div class="proj-desc">Releases a secondary projectile straight downward mid-flight.</div>
+    </div>
+
+    <div class="proj-card" style="--card-accent:#86efac">
+      <div class="proj-orb">&#8617;</div>
+      <div class="proj-name">Boomerang</div>
+      <div class="proj-desc">Curves back toward the slingshot after 1.2 seconds &mdash; hits twice.</div>
+    </div>
+
+    <div class="proj-card" style="--card-accent:#67e8f9">
+      <div class="proj-orb">&#9675;</div>
+      <div class="proj-name">Bubbler</div>
+      <div class="proj-desc">Captures nearby objects in a bubble and lifts them into the air.</div>
+    </div>
+
+    <div class="proj-card" style="--card-accent:#f9a8d4">
+      <div class="proj-orb">&#10010;</div>
+      <div class="proj-name">Inflater</div>
+      <div class="proj-desc">Grows mid-flight &mdash; becomes heavier and wider, impossible to dodge.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- MATERIALS -->
+<section id="materials">
+  <div class="materials-inner">
+    <div class="reveal">
+      <p class="section-label">Block Materials</p>
+      <h2 class="section-title">Four materials.<br>Infinite structures.</h2>
+      <p class="section-sub">Each material behaves differently under force. Mix them together for satisfying chain collapses.</p>
+    </div>
+    <div class="materials-grid reveal" style="transition-delay:0.1s">
+
+      <div class="mat-card">
+        <div class="mat-visual" style="background:#1a1410">
+          <div class="mat-block" style="width:28px;height:36px;background:#8b6914;border-radius:4px"></div>
+          <div class="mat-block" style="width:36px;height:24px;background:#a07820;border-radius:4px"></div>
+          <div class="mat-block" style="width:22px;height:28px;background:#8b6914;border-radius:50%"></div>
+        </div>
+        <div class="mat-name">Wood</div>
+        <div class="mat-hp" style="background:rgba(160,120,32,0.15);color:#c49a30">Medium HP</div>
+        <div class="mat-desc">Balanced durability. Satisfying crack on break. The bread and butter of any level.</div>
+      </div>
+
+      <div class="mat-card">
+        <div class="mat-visual" style="background:#111318">
+          <div class="mat-block" style="width:30px;height:38px;background:#5a6475;border-radius:4px"></div>
+          <div class="mat-block" style="width:38px;height:26px;background:#6b7688;border-radius:4px"></div>
+          <div class="mat-block" style="width:24px;height:30px;background:#5a6475;border-radius:50%"></div>
+        </div>
+        <div class="mat-name">Stone</div>
+        <div class="mat-hp" style="background:rgba(100,110,130,0.15);color:#8090a8">High HP</div>
+        <div class="mat-desc">Tough and unyielding. Resists damage &mdash; needs heavy impacts or chain collapses to break.</div>
+      </div>
+
+      <div class="mat-card">
+        <div class="mat-visual" style="background:#0d1520">
+          <div class="mat-block" style="width:28px;height:36px;background:rgba(147,210,255,0.35);border:1px solid rgba(147,210,255,0.5);border-radius:4px"></div>
+          <div class="mat-block" style="width:36px;height:22px;background:rgba(147,210,255,0.3);border:1px solid rgba(147,210,255,0.45);border-radius:4px"></div>
+          <div class="mat-block" style="width:20px;height:26px;background:rgba(147,210,255,0.35);border:1px solid rgba(147,210,255,0.5);border-radius:50%"></div>
+        </div>
+        <div class="mat-name">Glass</div>
+        <div class="mat-hp" style="background:rgba(147,210,255,0.1);color:#6bc8f0">Low HP</div>
+        <div class="mat-desc">Shatters easily on contact. Ideal for triggering chain collapses through a structure.</div>
+      </div>
+
+      <div class="mat-card">
+        <div class="mat-visual" style="background:#0d1420">
+          <div class="mat-block" style="width:28px;height:36px;background:rgba(186,230,253,0.4);border:1px solid rgba(186,230,253,0.6);border-radius:4px"></div>
+          <div class="mat-block" style="width:36px;height:22px;background:rgba(186,230,253,0.35);border:1px solid rgba(186,230,253,0.55);border-radius:4px"></div>
+          <div class="mat-block" style="width:20px;height:26px;background:rgba(186,230,253,0.4);border:1px solid rgba(186,230,253,0.6);border-radius:50%"></div>
+        </div>
+        <div class="mat-name">Ice</div>
+        <div class="mat-hp" style="background:rgba(186,230,253,0.1);color:#7dd8f8">Very Low HP</div>
+        <div class="mat-desc">Brittle and slippery. Blocks slide unpredictably &mdash; surprising even when you aim true.</div>
+      </div>
+
+    </div>
+    <div class="shapes-note reveal">
+      <svg width="48" height="20" viewBox="0 0 48 20">
+        <rect x="0" y="4" width="12" height="12" rx="1.5" fill="rgba(255,255,255,0.15)"/>
+        <circle cx="28" cy="10" r="7" fill="rgba(255,255,255,0.12)"/>
+        <polygon points="48,18 40,18 44,4" fill="rgba(255,255,255,0.13)"/>
+      </svg>
+      Blocks come in rectangles, circles, and triangles &mdash; each with unique collision behavior.
+    </div>
+  </div>
+</section>
+
+<!-- HOW TO PLAY -->
+<section id="howto">
+  <div class="howto-inner">
+    <div class="reveal">
+      <p class="section-label">Mechanics</p>
+      <h2 class="section-title">How to play.</h2>
+    </div>
+    <div class="steps-row reveal" style="transition-delay:0.1s">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Aim &amp; charge</div>
+        <div class="step-desc">Drag the slingshot to set your angle and power. Pull further for more force.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Release</div>
+        <div class="step-desc">Let go to launch. Your projectile follows a real physics parabola &mdash; gravity included.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">Activate</div>
+        <div class="step-desc">Tap mid-flight to trigger your projectile's special ability at exactly the right moment.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-title">Win</div>
+        <div class="step-desc">Destroy all targets. Fewer shots = more stars. Perfect runs earn all three.</div>
+      </div>
+    </div>
+    <div class="score-note reveal" style="transition-delay:0.2s">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <polygon points="9,1 11.5,6.5 17.5,7.4 13.2,11.5 14.3,17.5 9,14.7 3.7,17.5 4.8,11.5 0.5,7.4 6.5,6.5" fill="rgba(245,166,35,0.25)" stroke="#f5a623" stroke-width="1"/>
+      </svg>
+      <span>Score = <strong>blocks destroyed</strong> + <strong>targets hit</strong> + <strong>unused shots remaining</strong>. High-efficiency runs dominate the leaderboard.</span>
+    </div>
+  </div>
+</section>
+
+<!-- LEVELS -->
+<section id="levels">
+  <div class="levels-inner">
+    <div class="reveal">
+      <p class="section-label">Campaign</p>
+      <h2 class="section-title">10 levels.<br>Escalating chaos.</h2>
+      <p class="section-sub">Each level introduces new projectile types and more complex structures. How many stars can you earn?</p>
+    </div>
+    <div class="levels-grid reveal" style="transition-delay:0.1s">
+      <div class="level-tile unlocked active-glow">
+        <div class="level-num">1</div>
+        <div class="level-stars"><span class="star on">&#9733;</span><span class="star on">&#9733;</span><span class="star on">&#9733;</span></div>
+        <div class="level-tag">Tutorial</div>
+      </div>
+      <div class="level-tile unlocked">
+        <div class="level-num">2</div>
+        <div class="level-stars"><span class="star on">&#9733;</span><span class="star on">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Wood</div>
+      </div>
+      <div class="level-tile unlocked">
+        <div class="level-num">3</div>
+        <div class="level-stars"><span class="star on">&#9733;</span><span class="star off">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Splitter</div>
+      </div>
+      <div class="level-tile unlocked">
+        <div class="level-num">4</div>
+        <div class="level-stars"><span class="star on">&#9733;</span><span class="star on">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Glass</div>
+      </div>
+      <div class="level-tile unlocked">
+        <div class="level-num">5</div>
+        <div class="level-stars"><span class="star off">&#9733;</span><span class="star off">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Bomber</div>
+      </div>
+      <div class="level-tile locked">
+        <div class="level-num">6</div>
+        <div class="level-stars"><span class="star off">&#9733;</span><span class="star off">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Stone</div>
+      </div>
+      <div class="level-tile locked">
+        <div class="level-num">7</div>
+        <div class="level-stars"><span class="star off">&#9733;</span><span class="star off">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Ice</div>
+      </div>
+      <div class="level-tile locked">
+        <div class="level-num">8</div>
+        <div class="level-stars"><span class="star off">&#9733;</span><span class="star off">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Bubbler</div>
+      </div>
+      <div class="level-tile locked">
+        <div class="level-num">9</div>
+        <div class="level-stars"><span class="star off">&#9733;</span><span class="star off">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Mixed</div>
+      </div>
+      <div class="level-tile locked">
+        <div class="level-num">10</div>
+        <div class="level-stars"><span class="star off">&#9733;</span><span class="star off">&#9733;</span><span class="star off">&#9733;</span></div>
+        <div class="level-tag">Chaos</div>
+      </div>
+    </div>
+    <p class="levels-note reveal">Levels 6&ndash;10 unlock as you earn stars. New projectile types introduced gradually.</p>
+  </div>
+</section>
+
+<!-- LEADERBOARD -->
+<section id="leaderboard">
+  <div class="lb-inner">
+    <div class="reveal">
+      <p class="section-label">Compete Globally</p>
+      <h2 class="section-title">Rank against the world.</h2>
+      <p class="section-sub" style="margin-bottom:1.5rem">Every completed level submits your score online. Each level has its own global leaderboard &mdash; see exactly where you stand.</p>
+      <p class="section-sub" style="font-size:0.88rem">Login and registration are optional &mdash; you can play and compete as a guest. Register to lock in a username and preserve your rankings.</p>
+    </div>
+    <div class="lb-board reveal" style="transition-delay:0.15s">
+      <div class="lb-head">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M7 3.5V7l2.5 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        Level 1 &mdash; Global Leaderboard
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank gold">1</div>
+        <div class="lb-name">xXDestroyer42Xx</div>
+        <div class="lb-score">18,450 pts</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank silver">2</div>
+        <div class="lb-name">physics_nerd</div>
+        <div class="lb-score">17,220 pts</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank bronze">3</div>
+        <div class="lb-name">mipt_master</div>
+        <div class="lb-score">16,800 pts</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">4</div>
+        <div class="lb-name">slingshot_pro</div>
+        <div class="lb-score">15,940 pts</div>
+      </div>
+      <div class="lb-row">
+        <div class="lb-rank">5</div>
+        <div class="lb-name lb-guest">guest_7823</div>
+        <div class="lb-score">14,200 pts</div>
+      </div>
+      <div class="lb-row" style="opacity:0.35">
+        <div class="lb-rank">&hellip;</div>
+        <div class="lb-name">&mdash;</div>
+        <div class="lb-score">&mdash;</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section id="cta">
+  <div class="cta-inner reveal">
+    <h2 class="cta-title">Ready to pull the slingshot?</h2>
+    <p class="cta-sub">Browser-native, no install. Built from scratch in C++17.</p>
+    <a href="./play.html" class="btn-xl">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor"><path d="M3.5 2.5l11 6.5-11 6.5V2.5z"/></svg>
+      Play Now
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>&copy; 2026 AngryMipts &middot; <span>angrymipts.ru</span></div>
+  <div>Built with C++17 &middot; Physics from scratch &middot; WebAssembly</div>
+</footer>
+
+<script>
+// NAV SCROLL
+const nav = document.getElementById('main-nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 60);
+}, {passive: true});
+
+// SCROLL REVEAL
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// HERO CANVAS
+const canvas = document.getElementById('hero-canvas');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = canvas.offsetWidth; H = canvas.height = canvas.offsetHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+let t = 0;
+let lastTs = null;
+
+const SLING_X = 0.22, SLING_Y = 0.72, SLING_FORK = 0.025;
+const TOWER_X = 0.72, TOWER_BASE_Y = 0.78, BLOCK_W = 0.048, BLOCK_H = 0.052;
+const TOWER_LAYOUT = [
+  {c:0,r:0},{c:1,r:0},{c:2,r:0},
+  {c:0,r:1},{c:1,r:1},{c:2,r:1},
+  {c:0.5,r:2},{c:1.5,r:2},
+  {c:1,r:3}
+];
+
+function parabola(tx) {
+  const sx = SLING_X, sy = SLING_Y;
+  const ex = TOWER_X + 0.025, ey = TOWER_BASE_Y - BLOCK_H * 2;
+  const t1 = (tx - sx) / (ex - sx);
+  const py = SLING_Y - 0.32;
+  return {
+    x: sx + (ex - sx) * t1,
+    y: (1 - t1) * sy + t1 * ey + (py - (sy * (1-t1) + ey * t1)) * 4 * t1 * (1-t1)
+  };
+}
+
+const clouds = [
+  {x:0.1,y:0.18,r:0.09,speed:0.012},{x:0.45,y:0.12,r:0.07,speed:0.008},
+  {x:0.78,y:0.22,r:0.11,speed:0.006},{x:0.3,y:0.3,r:0.055,speed:0.01}
+];
+
+let scattered = [];
+function resetScattered() {
+  scattered = TOWER_LAYOUT.map(b => ({
+    x: TOWER_X + b.c * BLOCK_W, y: TOWER_BASE_Y - b.r * BLOCK_H - BLOCK_H,
+    vx:0, vy:0, rot:0, vrot:0, active:false
+  }));
+}
+resetScattered();
+
+function explode(cx, cy) {
+  scattered.forEach(b => {
+    const dx = b.x - cx, dy = b.y - cy;
+    const d = Math.sqrt(dx*dx + dy*dy) + 0.01;
+    const force = 0.08 / d;
+    b.vx = dx * force * (0.7 + Math.random() * 0.6);
+    b.vy = dy * force * (0.7 + Math.random() * 0.6) - 0.05;
+    b.vrot = (Math.random() - 0.5) * 8;
+    b.active = true;
+  });
+}
+
+const CYCLE = 6.5;
+function clamp(v,a,b) { return Math.max(a,Math.min(b,v)); }
+function easeOut(t) { return 1-(1-t)*(1-t); }
+function lerp(a,b,t) { return a+(b-a)*t; }
+
+const stars = Array.from({length:80}, () => ({
+  x:Math.random(), y:Math.random()*0.8,
+  r:Math.random()*1.2+0.3, twinkle:Math.random()*Math.PI*2
+}));
+
+function draw(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = Math.min((ts - lastTs) / 1000, 0.05);
+  lastTs = ts;
+  t += dt;
+  const ct = t % CYCLE;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Sky
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,'#050810'); sky.addColorStop(0.6,'#0d1525'); sky.addColorStop(1,'#111c10');
+  ctx.fillStyle = sky; ctx.fillRect(0,0,W,H);
+
+  // Stars
+  stars.forEach(s => {
+    const alpha = 0.3 + 0.2 * Math.sin(s.twinkle + t * 0.8);
+    ctx.beginPath(); ctx.arc(s.x*W, s.y*H, s.r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,255,240,${alpha})`; ctx.fill();
+  });
+
+  // Clouds
+  clouds.forEach(c => {
+    const cx = ((c.x + t * c.speed) % 1.3 - 0.15) * W;
+    const cy = c.y * H, rw = c.r * W;
+    const g = ctx.createRadialGradient(cx,cy,0,cx,cy,rw);
+    g.addColorStop(0,'rgba(255,255,255,0.04)'); g.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.beginPath(); ctx.ellipse(cx,cy,rw,rw*0.45,0,0,Math.PI*2);
+    ctx.fillStyle = g; ctx.fill();
+  });
+
+  // Hills
+  ctx.beginPath();
+  ctx.moveTo(0,H); ctx.bezierCurveTo(W*0.15,H*0.68,W*0.35,H*0.62,W*0.5,H*0.72);
+  ctx.bezierCurveTo(W*0.65,H*0.82,W*0.8,H*0.7,W,H*0.74);
+  ctx.lineTo(W,H); ctx.closePath();
+  const hg = ctx.createLinearGradient(0,H*0.62,0,H);
+  hg.addColorStop(0,'#1a2e14'); hg.addColorStop(1,'#0d120a');
+  ctx.fillStyle = hg; ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0,H); ctx.bezierCurveTo(W*0.1,H*0.74,W*0.25,H*0.72,W*0.42,H*0.78);
+  ctx.bezierCurveTo(W*0.55,H*0.83,W*0.7,H*0.76,W,H*0.8);
+  ctx.lineTo(W,H); ctx.closePath();
+  const hg2 = ctx.createLinearGradient(0,H*0.72,0,H);
+  hg2.addColorStop(0,'#1e3a18'); hg2.addColorStop(1,'#111a0e');
+  ctx.fillStyle = hg2; ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0,H*0.82); ctx.bezierCurveTo(W*0.3,H*0.79,W*0.6,H*0.83,W,H*0.8);
+  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath();
+  const gg = ctx.createLinearGradient(0,H*0.79,0,H);
+  gg.addColorStop(0,'#233d1c'); gg.addColorStop(1,'#131a10');
+  ctx.fillStyle = gg; ctx.fill();
+
+  // Slingshot
+  const sx = SLING_X*W, sy = SLING_Y*H;
+  const forkH = 0.07*H, forkW = SLING_FORK*W, stickH = 0.13*H;
+  ctx.beginPath(); ctx.moveTo(sx,sy+forkH*0.3); ctx.lineTo(sx,sy+stickH);
+  ctx.strokeStyle='#7a5c2e'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx,sy+forkH*0.1); ctx.lineTo(sx-forkW,sy-forkH);
+  ctx.strokeStyle='#8b6830'; ctx.lineWidth=4; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx,sy+forkH*0.1); ctx.lineTo(sx+forkW,sy-forkH); ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(sx-forkW,sy-forkH,5,0,Math.PI*2); ctx.arc(sx+forkW,sy-forkH,5,0,Math.PI*2);
+  ctx.fillStyle='#a07835'; ctx.fill();
+
+  // Projectile & rubber band
+  let ballX, ballY, ballAlpha = 1;
+
+  if (ct < 1.2) {
+    const charge = easeOut(clamp(ct/1.2,0,1));
+    const pullX = sx - 0.055*W*Math.sin(charge*Math.PI*0.8);
+    const pullY = sy - forkH*0.2 + 0.04*H*charge;
+    ballX = lerp(sx, pullX, charge);
+    ballY = lerp(sy - forkH*0.5, pullY, charge);
+    ctx.beginPath();
+    ctx.moveTo(sx-forkW,sy-forkH); ctx.lineTo(ballX,ballY); ctx.lineTo(sx+forkW,sy-forkH);
+    ctx.strokeStyle='#c8a050'; ctx.lineWidth=2.5; ctx.stroke();
+  } else if (ct < 3.0) {
+    const flyT = clamp((ct-1.2)/1.8,0,1);
+    const pt = parabola(SLING_X + flyT*(TOWER_X+0.025-SLING_X));
+    ballX = pt.x*W; ballY = pt.y*H;
+    ctx.beginPath();
+    const arcSteps = 40;
+    for (let i = 0; i <= arcSteps*flyT; i++) {
+      const at = i/arcSteps;
+      const apt = parabola(SLING_X + at*(TOWER_X+0.025-SLING_X));
+      if (i===0) ctx.moveTo(apt.x*W,apt.y*H); else ctx.lineTo(apt.x*W,apt.y*H);
+    }
+    ctx.strokeStyle='rgba(245,166,35,0.2)'; ctx.lineWidth=2; ctx.setLineDash([4,6]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath();
+    for (let i = Math.ceil(arcSteps*flyT); i <= arcSteps; i++) {
+      const at = i/arcSteps;
+      const apt = parabola(SLING_X + at*(TOWER_X+0.025-SLING_X));
+      if (i===Math.ceil(arcSteps*flyT)) ctx.moveTo(apt.x*W,apt.y*H); else ctx.lineTo(apt.x*W,apt.y*H);
+    }
+    ctx.strokeStyle='rgba(245,166,35,0.08)'; ctx.lineWidth=1.5; ctx.setLineDash([3,8]); ctx.stroke(); ctx.setLineDash([]);
+    if (flyT > 0.97 && !scattered[0].active) {
+      const pt2 = parabola(TOWER_X+0.025); explode(pt2.x,pt2.y);
+    }
+  } else if (ct < 4.5) {
+    ballAlpha = 0;
+    scattered.forEach(b => {
+      if (b.active) {
+        b.x += b.vx*dt*0.06; b.y += b.vy*dt*0.06;
+        b.vy += 0.002; b.rot += b.vrot*dt*0.05;
+        b.vx *= 0.97; b.vy *= 0.97;
+        if (b.y > TOWER_BASE_Y) { b.y = TOWER_BASE_Y; b.vy *= -0.2; b.vrot *= 0.5; }
+      }
+    });
+  } else if (ct < 5.5) {
+    ballAlpha = 0;
+  } else {
+    resetScattered(); ballAlpha = 0;
+  }
+
+  // Tower / scattered blocks
+  const blockColors = ['#5a4422','#6b5230','#7a6040','#4e3a1c'];
+  const IMPACT_PHASE = ct >= 3.0 && ct < 5.5;
+
+  if (!IMPACT_PHASE) {
+    TOWER_LAYOUT.forEach((b,i) => {
+      const bx = (TOWER_X+b.c*BLOCK_W)*W, by = (TOWER_BASE_Y-b.r*BLOCK_H-BLOCK_H)*H;
+      const bw = BLOCK_W*W-2, bh = BLOCK_H*H-2;
+      ctx.fillStyle = blockColors[i%blockColors.length];
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,3); ctx.fill(); ctx.stroke();
+    });
+    const tx2=(TOWER_X+BLOCK_W)*W, ty2=(TOWER_BASE_Y-BLOCK_H*4-0.02)*H;
+    ctx.beginPath(); ctx.arc(tx2,ty2,8,0,Math.PI*2);
+    ctx.fillStyle='rgba(239,68,68,0.7)'; ctx.fill();
+    ctx.beginPath(); ctx.arc(tx2,ty2,4,0,Math.PI*2);
+    ctx.fillStyle='#ef4444'; ctx.fill();
+  } else {
+    scattered.forEach((b,i) => {
+      const bx=b.x*W, by=b.y*H, bw=BLOCK_W*W-2, bh=BLOCK_H*H-2;
+      ctx.save(); ctx.translate(bx+bw/2,by+bh/2); ctx.rotate(b.rot);
+      ctx.fillStyle=blockColors[i%blockColors.length];
+      ctx.beginPath(); ctx.roundRect(-bw/2,-bh/2,bw,bh,3); ctx.fill(); ctx.restore();
+    });
+    if (ct < 3.3) {
+      const impAlpha = (1-(ct-3.0)/0.3)*0.5;
+      const ipx=(TOWER_X+0.06)*W, ipy=(TOWER_BASE_Y-0.12)*H;
+      const imp = ctx.createRadialGradient(ipx,ipy,0,ipx,ipy,80);
+      imp.addColorStop(0,`rgba(255,180,50,${impAlpha})`);
+      imp.addColorStop(0.5,`rgba(245,100,30,${impAlpha*0.5})`);
+      imp.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=imp; ctx.beginPath(); ctx.arc(ipx,ipy,80,0,Math.PI*2); ctx.fill();
+    }
+  }
+
+  // Ball
+  if (ballAlpha > 0 && ballX && ballY) {
+    ctx.save(); ctx.globalAlpha = ballAlpha;
+    const ballR = 11;
+    const ballG = ctx.createRadialGradient(ballX-3,ballY-3,1,ballX,ballY,ballR);
+    ballG.addColorStop(0,'#ffd070'); ballG.addColorStop(0.6,'#f5a623'); ballG.addColorStop(1,'#c87010');
+    ctx.beginPath(); ctx.arc(ballX,ballY,ballR,0,Math.PI*2); ctx.fillStyle=ballG; ctx.fill();
+    const glow = ctx.createRadialGradient(ballX,ballY,0,ballX,ballY,ballR*2.5);
+    glow.addColorStop(0,'rgba(245,166,35,0.3)'); glow.addColorStop(1,'rgba(245,166,35,0)');
+    ctx.beginPath(); ctx.arc(ballX,ballY,ballR*2.5,0,Math.PI*2); ctx.fillStyle=glow; ctx.fill();
+    ctx.restore();
+  }
+
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+</script>
+</body>
+</html>
