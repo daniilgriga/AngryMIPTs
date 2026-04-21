@@ -347,8 +347,8 @@ TEST( OnlineScoreClient, SubmitScoreWithTokenSendsBearerHeader )
     LocalMockHttpServer server( {LocalMockHttpServer::ScriptedResponse{201, R"({"ok":true})"}} );
     angry::OnlineScoreClient client( server.base_url() );
 
-    const bool ok = client.submit_score_with_token( "jwt-token-xyz", 7, 4000, 2 );
-    EXPECT_TRUE( ok );
+    const auto ok = client.submit_score_with_token( "jwt-token-xyz", 7, 4000, 2 );
+    EXPECT_EQ( ok, angry::ScoreSubmitStatus::Ok );
     EXPECT_EQ( server.request_count(), 1 );
 
     const auto targets = server.request_targets();
@@ -363,6 +363,6 @@ TEST( OnlineScoreClient, SubmitScoreWithTokenSendsBearerHeader )
 TEST( OnlineScoreClient, SubmitScoreWithTokenReturnsFalseOnEmptyToken )
 {
     angry::OnlineScoreClient client( "http://127.0.0.1:1" );
-    const bool ok = client.submit_score_with_token( "", 1, 100, 1 );
-    EXPECT_FALSE( ok );
+    const auto ok = client.submit_score_with_token( "", 1, 100, 1 );
+    EXPECT_EQ( ok, angry::ScoreSubmitStatus::Failed );
 }
