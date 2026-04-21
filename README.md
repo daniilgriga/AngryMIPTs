@@ -426,6 +426,16 @@ Levels are stored in `levels/level_01.json` through `levels/level_0113.json` (18
 | `Unavailable` | Server unreachable or HTTP error |
 | `InvalidResponse` | Response body failed JSON parsing |
 
+### Database Schema
+
+![db_schema](img/db_schema.png)
+
+| Table | Purpose |
+|---|---|
+| `users` | Registered players. Password stored as a hash. `username` is unique. |
+| `user_scores` | Full attempt history — every score submission creates a new row. Index on `level_id` speeds up per-level history queries. |
+| `user_best_scores` | Best result per player per level, updated via upsert on every submission. Composite index on `(level_id, best_score DESC, best_stars DESC)` drives leaderboard queries. All rows are cascade-deleted when the parent user is removed (`ON DELETE CASCADE`). |
+
 ### Async Operations
 
 Score submission and leaderboard fetching use async variants:
