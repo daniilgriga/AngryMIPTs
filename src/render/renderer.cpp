@@ -254,23 +254,38 @@ void Renderer::draw_snapshot ( platform::RenderTarget& target, const WorldSnapsh
 void Renderer::draw_background ( platform::RenderTarget& target )
 {
 #ifdef __EMSCRIPTEN__
-    // Web fallback: avoid per-vertex gradient artifacts on raylib/WebGL by
-    // drawing layered color bands and explicit silhouettes.
+    // Web sky: smooth gradient via many thin horizontal bands (avoids per-vertex
+    // colour artifacts in Raylib/WebGL while still looking like a real gradient).
     {
-        platform::RectShape sky_top ( {kWorldW, kGroundY * 0.34f} );
-        sky_top.setPosition ( {0.f, 0.f} );
-        sky_top.setFillColor ( platform::Color ( 72, 140, 205 ) );
-        target.draw ( sky_top );
-
-        platform::RectShape sky_mid ( {kWorldW, kGroundY * 0.34f} );
-        sky_mid.setPosition ( {0.f, kGroundY * 0.34f} );
-        sky_mid.setFillColor ( platform::Color ( 110, 176, 220 ) );
-        target.draw ( sky_mid );
-
-        platform::RectShape sky_low ( {kWorldW, kGroundY * 0.32f} );
-        sky_low.setPosition ( {0.f, kGroundY * 0.68f} );
-        sky_low.setFillColor ( platform::Color ( 170, 214, 238 ) );
-        target.draw ( sky_low );
+        struct Stop { float t; uint8_t r, g, b; };
+        constexpr Stop stops[] = {
+            { 0.00f,  48, 100, 185 },
+            { 0.40f,  90, 155, 210 },
+            { 0.75f, 148, 196, 228 },
+            { 1.00f, 175, 215, 240 },
+        };
+        constexpr int bands = 48;
+        for ( int i = 0; i < bands; ++i )
+        {
+            const float t0 = static_cast<float>( i )     / bands;
+            const float t1 = static_cast<float>( i + 1 ) / bands;
+            const float tm = ( t0 + t1 ) * 0.5f;
+            // find surrounding stops
+            int s = 0;
+            while ( s + 2 < 4 && stops[s+1].t < tm ) ++s;
+            const float lt = ( tm - stops[s].t ) / ( stops[s+1].t - stops[s].t );
+            const auto lerp8 = []( uint8_t a, uint8_t b, float f ) -> uint8_t {
+                return static_cast<uint8_t>( a + ( b - a ) * f );
+            };
+            platform::Color c(
+                lerp8( stops[s].r, stops[s+1].r, lt ),
+                lerp8( stops[s].g, stops[s+1].g, lt ),
+                lerp8( stops[s].b, stops[s+1].b, lt ) );
+            platform::RectShape band( { kWorldW, kGroundY / bands + 1.f } );
+            band.setPosition( { 0.f, kGroundY * t0 } );
+            band.setFillColor( c );
+            target.draw( band );
+        }
     }
 #else
     // Sky — smooth vertical gradient from deep blue (top) to hazy horizon (bottom)
@@ -323,27 +338,38 @@ void Renderer::draw_background ( platform::RenderTarget& target )
     draw_cloud ( target, std::fmod ( 1600.f + t * 7.4f, kWorldW + 360.f ) - 180.f, 100.f, 0.6f );
 
 #ifdef __EMSCRIPTEN__
-    // Ground layers (explicit bands for stable web rendering).
+    // Web ground: smooth gradient via thin bands — no hard seams, no scan lines.
     {
-        platform::RectShape grass ( {kWorldW, 22.f} );
-        grass.setPosition ( {0.f, kGroundY} );
-        grass.setFillColor ( platform::Color ( 84, 156, 58 ) );
-        target.draw ( grass );
-
-        platform::RectShape topsoil ( {kWorldW, 36.f} );
-        topsoil.setPosition ( {0.f, kGroundY + 22.f} );
-        topsoil.setFillColor ( platform::Color ( 112, 78, 44 ) );
-        target.draw ( topsoil );
-
-        platform::RectShape soil ( {kWorldW, 84.f} );
-        soil.setPosition ( {0.f, kGroundY + 58.f} );
-        soil.setFillColor ( platform::Color ( 72, 50, 28 ) );
-        target.draw ( soil );
-
-        platform::RectShape deep ( {kWorldW, kWorldH - ( kGroundY + 142.f )} );
-        deep.setPosition ( {0.f, kGroundY + 142.f} );
-        deep.setFillColor ( platform::Color ( 48, 34, 18 ) );
-        target.draw ( deep );
+        struct GStop { float y; uint8_t r, g, b; };
+        const GStop gs[] = {
+            { kGroundY,          84,  156,  58 },
+            { kGroundY + 24.f,  112,   78,  44 },
+            { kGroundY + 90.f,   72,   50,  28 },
+            { kWorldH,           48,   34,  18 },
+        };
+        constexpr int gbands = 32;
+        const float total = kWorldH - kGroundY;
+        for ( int i = 0; i < gbands; ++i )
+        {
+            const float t0 = static_cast<float>( i )     / gbands;
+            const float t1 = static_cast<float>( i + 1 ) / gbands;
+            const float tm = ( t0 + t1 ) * 0.5f;
+            const float ym = kGroundY + tm * total;
+            int s = 0;
+            while ( s + 2 < 4 && gs[s+1].y < ym ) ++s;
+            const float lt = ( ym - gs[s].y ) / ( gs[s+1].y - gs[s].y );
+            const auto lerp8 = []( uint8_t a, uint8_t b, float f ) -> uint8_t {
+                return static_cast<uint8_t>( a + ( b - a ) * f );
+            };
+            platform::Color c(
+                lerp8( gs[s].r, gs[s+1].r, lt ),
+                lerp8( gs[s].g, gs[s+1].g, lt ),
+                lerp8( gs[s].b, gs[s+1].b, lt ) );
+            platform::RectShape band( { kWorldW, total / gbands + 1.f } );
+            band.setPosition( { 0.f, kGroundY + t0 * total } );
+            band.setFillColor( c );
+            target.draw( band );
+        }
     }
 #else
     // --- Ground ---
@@ -372,6 +398,7 @@ void Renderer::draw_background ( platform::RenderTarget& target )
     }
 #endif
 
+#ifndef __EMSCRIPTEN__
     // Horizon haze: thin semi-transparent strip to soften the sky/ground edge
     {
         const platform::Color haze_top    ( 200, 230, 255,   0 );
@@ -383,7 +410,17 @@ void Renderer::draw_background ( platform::RenderTarget& target )
         haze[3] = { {kWorldW, kGroundY + 10.f}, haze_bottom };
         target.draw ( haze );
     }
+#endif
 
+#ifdef __EMSCRIPTEN__
+    // Flat grass edge (web): per-vertex TriangleStrip/Lines artifact on WebGL
+    {
+        platform::RectShape grass_edge ( { kWorldW, 12.f } );
+        grass_edge.setPosition ( { 0.f, kGroundY - 6.f } );
+        grass_edge.setFillColor ( platform::Color ( 110, 185, 72 ) );
+        target.draw ( grass_edge );
+    }
+#else
     // Wavy grass edge: a thin strip with sinusoidal top profile
     {
         const int   segs     = 96;
@@ -415,7 +452,6 @@ void Renderer::draw_background ( platform::RenderTarget& target )
                                  static_cast<std::size_t> ( blade_count * 2 ) );
         for ( int i = 0; i < blade_count; ++i )
         {
-            // deterministic pseudo-random position & height from index
             const uint32_t h1 = static_cast<uint32_t> ( i ) * 2654435761u;
             const uint32_t h2 = h1 ^ ( h1 >> 16u );
             const float x     = static_cast<float> ( h1 & 0xFFFFu ) / 65535.f * kWorldW;
@@ -434,8 +470,11 @@ void Renderer::draw_background ( platform::RenderTarget& target )
         }
         target.draw ( blades );
     }
+#endif
 
-    // Soil texture: horizontal scan lines suggesting layered earth
+#ifndef __EMSCRIPTEN__
+    // Soil texture: horizontal scan lines (native only — on web the gradient
+    // ground already provides enough depth without visible bands).
     {
         const int lines = 12;
         for ( int i = 0; i < lines; ++i )
@@ -447,6 +486,7 @@ void Renderer::draw_background ( platform::RenderTarget& target )
             target.draw ( ln, 2, sf::PrimitiveType::Lines );
         }
     }
+#endif
 }
 
 void draw_hill ( platform::RenderTarget& target, float cx, float base_y,

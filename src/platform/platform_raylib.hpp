@@ -388,12 +388,9 @@ struct Window
     void close()        { open_ = false; CloseWindow(); }
     void display()      { EndDrawing(); }
     void clear( Color c = {} ) { BeginDrawing(); ClearBackground( c.to_rl() ); }
-    void setFramerateLimit( unsigned /*fps*/ )
+    void setFramerateLimit( unsigned fps )
     {
-        // On web, emscripten_set_main_loop with fps=0 uses requestAnimationFrame
-        // (native monitor rate). Calling SetTargetFPS() here would cap to 30 in
-        // some browsers. Leave FPS uncapped; the browser's vsync handles pacing.
-        SetTargetFPS( 0 );
+        SetTargetFPS( fps > 0 ? static_cast<int>( fps ) : 60 );
     }
     void setVerticalSyncEnabled( bool /*v*/ ) {}
     void setView( const View& view ) { current_view_ = view; }
