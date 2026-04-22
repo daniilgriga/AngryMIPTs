@@ -1,344 +1,578 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" href="data:,">
-  <title>AngryMipts Web</title>
-  <style>
-    :root {
-      color-scheme: dark;
-      --bg0: #0c1628;
-      --bg1: #1d3f56;
-      --panel: rgba(8, 15, 28, 0.72);
-      --line: rgba(170, 215, 255, 0.35);
-      --text: #eef5ff;
-      --muted: #b6d0eb;
-      --accent: #84d4ff;
-      --accent-2: #ffd78a;
-      --shadow: rgba(0, 0, 0, 0.45);
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:,">
+<title>Play &mdash; AngryMipts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:    #0d1018;
+  --bg2:   #141824;
+  --bg3:   #1b2135;
+  --amber: #f5a623;
+  --coral: #e8835a;
+  --text:  #ede8e0;
+  --text2: #8a93a8;
+  --text3: #4d566a;
+}
 
-    * {
-      box-sizing: border-box;
-    }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
 
-    html, body {
-      margin: 0;
-      height: 100%;
-      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(1200px 700px at 10% 15%, #295f7b66 0%, transparent 58%),
-        radial-gradient(900px 600px at 85% 20%, #79a0d033 0%, transparent 62%),
-        linear-gradient(180deg, var(--bg0) 0%, var(--bg1) 100%);
-    }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+}
 
-    body {
-      display: grid;
-      place-items: center;
-      padding: 16px;
-    }
+/* GRAIN */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 9999; opacity: 0.45;
+}
 
-    .app {
-      width: min(1280px, 100%);
-      display: grid;
-      gap: 12px;
-    }
+/* TOP BAR */
+#topbar {
+  flex-shrink: 0;
+  height: 64px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 clamp(1rem, 3vw, 2.5rem);
+  background: rgba(13,16,24,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  z-index: 100;
+  position: relative;
+}
 
-    .topbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 10px 14px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: var(--panel);
-      box-shadow: 0 8px 30px var(--shadow);
-      backdrop-filter: blur(8px);
-    }
+.bar-left {
+  display: flex; align-items: center; gap: 1.25rem;
+}
 
-    .title {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-    }
+.back-link {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  color: var(--text2); text-decoration: none;
+  font-size: 0.82rem; font-weight: 500;
+  padding: 0.4rem 0.75rem;
+  border-radius: 100px;
+  border: 1px solid rgba(255,255,255,0.07);
+  background: rgba(255,255,255,0.03);
+  transition: color 0.2s, background 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+.back-link:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.06);
+  border-color: rgba(255,255,255,0.12);
+}
+.back-link svg { flex-shrink: 0; }
 
-    .title h1 {
-      margin: 0;
-      font-size: 20px;
-      letter-spacing: 0.3px;
-    }
+.bar-divider {
+  width: 1px; height: 20px;
+  background: rgba(255,255,255,0.08);
+}
 
-    .title p {
-      margin: 0;
-      font-size: 13px;
-      color: var(--muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+.bar-logo {
+  font-family: 'Sora', sans-serif;
+  font-weight: 800; font-size: 1.1rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-decoration: none;
+}
+.bar-logo span { color: var(--amber); }
 
-    .actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-shrink: 0;
-    }
+.bar-right {
+  display: flex; align-items: center; gap: 0.75rem;
+}
 
-    button {
-      border: 1px solid #8fcfff88;
-      background: linear-gradient(180deg, #1f4f69, #163f55);
-      color: var(--text);
-      border-radius: 10px;
-      padding: 8px 12px;
-      font-size: 13px;
-      cursor: pointer;
-    }
+#btn-fullscreen {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  background: rgba(245,166,35,0.1);
+  border: 1px solid rgba(245,166,35,0.2);
+  color: var(--amber);
+  padding: 0.45rem 1rem;
+  border-radius: 100px;
+  font-family: 'Sora', sans-serif;
+  font-size: 0.8rem; font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+  letter-spacing: 0.02em;
+}
+#btn-fullscreen:hover {
+  background: rgba(245,166,35,0.18);
+  box-shadow: 0 0 20px rgba(245,166,35,0.15);
+  transform: translateY(-1px);
+}
+#btn-fullscreen:active { transform: translateY(0); }
 
-    button:hover {
-      border-color: #b2e3ffcc;
-      transform: translateY(-1px);
-    }
+/* MAIN STAGE */
+#stage {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  min-height: 0;
+}
 
-    .frame {
-      position: relative;
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      overflow: hidden;
-      background: #000;
-      box-shadow: 0 14px 38px var(--shadow);
-      max-width: 100%;
-    }
+/* SKY BACKGROUND */
+#sky-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+}
 
-    canvas {
-      width: min(1280px, 100%);
-      aspect-ratio: 16 / 9;
-      height: auto;
-      display: block;
-      margin: 0 auto;
-      background: #000;
-      image-rendering: auto;
-      outline: none;
-    }
+/* GAME WRAP */
+#game-wrap {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0;
+}
 
-    .overlay {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      background: linear-gradient(180deg, #10243aee, #0c192bee);
-      transition: opacity 220ms ease;
-      z-index: 5;
-    }
+#canvas-frame {
+  position: relative;
+  border-radius: 8px;
+  box-shadow:
+    0 0 0 1px rgba(245,166,35,0.2),
+    0 0 60px rgba(245,166,35,0.12),
+    0 0 120px rgba(245,166,35,0.05),
+    0 32px 80px rgba(0,0,0,0.7);
+  overflow: hidden;
+}
 
-    .overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
+#canvas {
+  display: block;
+  width: 1280px; height: 720px;
+  max-width: calc(100vw - 2rem);
+  background: #050810;
+  border-radius: 8px;
+  outline: none;
+  image-rendering: auto;
+}
 
-    .spinner {
-      width: 46px;
-      height: 46px;
-      border-radius: 50%;
-      border: 3px solid #8bcfff4d;
-      border-top-color: var(--accent-2);
-      animation: spin 0.95s linear infinite;
-    }
+/* LOADING OVERLAY */
+#overlay {
+  position: absolute; inset: 0;
+  border-radius: 8px;
+  background: rgba(8,10,18,0.97);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 1.5rem;
+  z-index: 10;
+  transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+#overlay.hidden {
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+.loader-logo {
+  font-family: 'Sora', sans-serif; font-weight: 800;
+  font-size: 2rem; letter-spacing: -0.04em;
+  color: var(--text);
+  animation: pulse-logo 2s ease-in-out infinite;
+}
+.loader-logo span { color: var(--amber); }
 
-    .status {
-      font-size: 14px;
-      color: #e9f4ff;
-      text-align: center;
-      max-width: 80%;
-    }
+@keyframes pulse-logo {
+  0%,100% { opacity: 0.6; }
+  50%      { opacity: 1; }
+}
 
-    .hint {
-      margin-top: 2px;
-      font-size: 12px;
-      color: #b8d2ea;
-    }
+.loader-ring {
+  width: 44px; height: 44px;
+  border: 2px solid rgba(245,166,35,0.15);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 
-    .details {
-      margin: 0;
-      max-width: 86%;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 12px;
-      line-height: 1.35;
-      color: #ffd9c8;
-      text-align: center;
-      display: none;
-    }
+.loader-status {
+  font-size: 0.78rem; letter-spacing: 0.12em;
+  color: var(--text3); text-transform: uppercase;
+  font-weight: 500; font-family: 'Sora', sans-serif;
+}
 
-    .details.visible {
-      display: block;
-    }
+.loader-bar-wrap {
+  width: 200px; height: 2px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 2px; overflow: hidden;
+}
+.loader-bar {
+  height: 100%; width: 0%;
+  background: var(--amber);
+  border-radius: 2px;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px rgba(245,166,35,0.6);
+}
 
-    @media (max-width: 720px) {
-      .title h1 { font-size: 18px; }
-      .title p  { font-size: 12px; }
-      .frame { min-height: 56vh; }
-    }
-  </style>
+/* error details inside overlay */
+#details {
+  margin: 0; max-width: 80%;
+  white-space: pre-wrap; word-break: break-word;
+  font-size: 0.75rem; line-height: 1.4;
+  color: #ffd9c8; text-align: center;
+  display: none;
+}
+#details.visible { display: block; }
+
+/* STATUS LINE */
+#status-line {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(13,16,24,0.6);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.status-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--text3);
+  display: inline-block; margin-right: 0.5rem;
+  transition: background 0.4s;
+}
+.status-dot.ready { background: #52b788; box-shadow: 0 0 6px rgba(82,183,136,0.5); }
+.status-dot.loading { background: var(--amber); animation: blink 1.1s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+#status-text {
+  font-size: 0.72rem; color: var(--text3);
+  font-weight: 500; letter-spacing: 0.05em;
+  display: flex; align-items: center;
+}
+.status-right {
+  font-size: 0.7rem; color: var(--text3);
+  font-family: 'Sora', sans-serif; font-weight: 600;
+  letter-spacing: 0.04em; opacity: 0.5;
+}
+
+/* FULLSCREEN */
+:fullscreen #topbar,
+:-webkit-full-screen #topbar { display: none; }
+:fullscreen #stage,
+:-webkit-full-screen #stage { height: 100vh; }
+:fullscreen #canvas,
+:-webkit-full-screen #canvas {
+  width: 100vw !important;
+  height: calc(100vw * 720 / 1280) !important;
+  max-width: none !important;
+}
+
+/* RESPONSIVE */
+@media (max-width: 1320px) {
+  #canvas {
+    width: calc(100vw - 2rem) !important;
+    height: calc((100vw - 2rem) * 9/16) !important;
+  }
+}
+</style>
 </head>
 <body>
-  <div class="app">
-    <div class="topbar">
-      <div class="title">
-        <h1>AngryMipts Web</h1>
-        <p>WASM build • press F11 in game or use fullscreen button</p>
-      </div>
-      <div class="actions">
-        <a href="./index.html" style="color:#b6d0eb;text-decoration:none;font-size:0.85rem;padding:0.4rem 0.9rem;border:1px solid rgba(170,215,255,0.2);border-radius:6px;transition:color 0.2s" onmouseover="this.style.color='#eef5ff'" onmouseout="this.style.color='#b6d0eb'">&#8592; Back</a>
-        <button id="fullscreen-btn" type="button">Fullscreen</button>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="bar-left">
+    <a href="../" class="back-link">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M8 2.5L4.5 6.5L8 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Back
+    </a>
+    <div class="bar-divider"></div>
+    <a href="../" class="bar-logo">Angry<span>Mipts</span></a>
+  </div>
+  <div class="bar-right">
+    <button id="btn-fullscreen">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M1.5 4.5V1.5H4.5M8.5 1.5H11.5V4.5M11.5 8.5V11.5H8.5M4.5 11.5H1.5V8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Fullscreen
+    </button>
+  </div>
+</div>
+
+<!-- MAIN STAGE -->
+<div id="stage">
+  <canvas id="sky-canvas"></canvas>
+
+  <div id="game-wrap">
+    <div id="canvas-frame">
+      <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+
+      <div id="overlay">
+        <div class="loader-logo">Angry<span>Mipts</span></div>
+        <div class="loader-ring"></div>
+        <div class="loader-bar-wrap">
+          <div class="loader-bar" id="loader-bar"></div>
+        </div>
+        <div class="loader-status" id="status">Preparing WebAssembly runtime&hellip;</div>
+        <pre id="details"></pre>
       </div>
     </div>
 
-    <div class="frame">
-      <div id="overlay" class="overlay">
-        <div class="spinner" aria-hidden="true"></div>
-        <div id="status" class="status">Preparing WebAssembly runtime...</div>
-        <div class="hint">First load can take a few seconds</div>
-        <pre id="details" class="details"></pre>
+    <div id="status-line">
+      <div id="status-text">
+        <span class="status-dot loading" id="status-dot"></span>
+        <span id="status-msg">Loading game engine&hellip;</span>
       </div>
-      <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+      <div class="status-right">angrymipts.ru</div>
     </div>
   </div>
+</div>
 
-  <script>
-    const overlay = document.getElementById('overlay');
-    const statusEl = document.getElementById('status');
-    const detailsEl = document.getElementById('details');
-    const canvasEl = document.getElementById('canvas');
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
+<script>
+// SKY BACKGROUND
+const sky = document.getElementById('sky-canvas');
+const skyCtx = sky.getContext('2d');
+let skyW, skyH;
 
-    function focusCanvas() {
-      if (canvasEl && typeof canvasEl.focus === 'function') {
-        canvasEl.focus({ preventScroll: true });
-      }
+function resizeSky() {
+  skyW = sky.width = sky.offsetWidth;
+  skyH = sky.height = sky.offsetHeight;
+}
+resizeSky();
+window.addEventListener('resize', resizeSky);
+
+const STARS = Array.from({length: 180}, () => ({
+  x: Math.random(), y: Math.random() * 0.75,
+  r: Math.random() * 1.4 + 0.2,
+  a: Math.random() * 0.6 + 0.1,
+  twinkle: Math.random() * Math.PI * 2,
+  speed: Math.random() * 1.5 + 0.5,
+}));
+
+const WISPS = Array.from({length: 6}, () => ({
+  x: Math.random(), y: Math.random() * 0.65,
+  rx: Math.random() * 0.15 + 0.08,
+  ry: Math.random() * 0.06 + 0.03,
+  hue: Math.random() > 0.5 ? [30,60,100] : [200,220,255],
+  a: Math.random() * 0.04 + 0.01,
+}));
+
+let skyT = 0, lastSkyTs = null;
+
+function drawSky(ts) {
+  if (!lastSkyTs) lastSkyTs = ts;
+  skyT += (ts - lastSkyTs) / 1000;
+  lastSkyTs = ts;
+
+  const g = skyCtx.createLinearGradient(0,0,0,skyH);
+  g.addColorStop(0,    '#040810');
+  g.addColorStop(0.35, '#0a1525');
+  g.addColorStop(0.65, '#1a3a5c');
+  g.addColorStop(0.85, '#1e2a18');
+  g.addColorStop(1,    '#2d1a0a');
+  skyCtx.fillStyle = g; skyCtx.fillRect(0,0,skyW,skyH);
+
+  const hg = skyCtx.createRadialGradient(skyW*0.5,skyH*0.88,0,skyW*0.5,skyH*0.88,skyW*0.55);
+  hg.addColorStop(0,'rgba(245,120,30,0.14)'); hg.addColorStop(0.5,'rgba(245,100,20,0.05)'); hg.addColorStop(1,'rgba(0,0,0,0)');
+  skyCtx.fillStyle = hg; skyCtx.fillRect(0,0,skyW,skyH);
+
+  const cg = skyCtx.createRadialGradient(skyW*0.3,skyH*0.2,0,skyW*0.3,skyH*0.2,skyW*0.4);
+  cg.addColorStop(0,'rgba(50,100,200,0.07)'); cg.addColorStop(1,'rgba(0,0,0,0)');
+  skyCtx.fillStyle = cg; skyCtx.fillRect(0,0,skyW,skyH);
+
+  WISPS.forEach(w => {
+    const wx = w.x*skyW, wy = w.y*skyH;
+    const wg = skyCtx.createRadialGradient(wx,wy,0,wx,wy,w.rx*skyW);
+    const [r,g2,b] = w.hue;
+    wg.addColorStop(0,`rgba(${r},${g2},${b},${w.a})`); wg.addColorStop(1,'rgba(0,0,0,0)');
+    skyCtx.save(); skyCtx.scale(1, w.ry/w.rx);
+    skyCtx.fillStyle = wg; skyCtx.beginPath();
+    skyCtx.arc(wx, wy/(w.ry/w.rx), w.rx*skyW, 0, Math.PI*2);
+    skyCtx.fill(); skyCtx.restore();
+  });
+
+  STARS.forEach(s => {
+    const alpha = s.a * (0.65 + 0.35*Math.sin(s.twinkle + skyT*s.speed));
+    skyCtx.beginPath(); skyCtx.arc(s.x*skyW, s.y*skyH, s.r, 0, Math.PI*2);
+    skyCtx.fillStyle = `rgba(220,230,255,${alpha})`; skyCtx.fill();
+  });
+
+  // Shooting star
+  const stPhase = (skyT * 0.07) % 1;
+  if (stPhase > 0.92) {
+    const p = (stPhase - 0.92) / 0.08;
+    const eased = p < 0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+    const stX = skyW*(0.15 + eased*0.55), stY = skyH*(0.05 + eased*0.25);
+    const tailLen = 80*Math.sin(p*Math.PI);
+    const stg = skyCtx.createLinearGradient(stX-tailLen, stY-tailLen*0.4, stX, stY);
+    stg.addColorStop(0,'rgba(255,240,200,0)');
+    stg.addColorStop(1,`rgba(255,240,200,${0.7*Math.sin(p*Math.PI)})`);
+    skyCtx.strokeStyle = stg; skyCtx.lineWidth = 1.2;
+    skyCtx.beginPath(); skyCtx.moveTo(stX-tailLen, stY-tailLen*0.4); skyCtx.lineTo(stX,stY); skyCtx.stroke();
+  }
+
+  // Hills
+  skyCtx.beginPath();
+  skyCtx.moveTo(0,skyH);
+  skyCtx.bezierCurveTo(skyW*0.12,skyH*0.78,skyW*0.28,skyH*0.74,skyW*0.4,skyH*0.82);
+  skyCtx.bezierCurveTo(skyW*0.52,skyH*0.90,skyW*0.65,skyH*0.80,skyW*0.78,skyH*0.84);
+  skyCtx.bezierCurveTo(skyW*0.88,skyH*0.88,skyW*0.95,skyH*0.82,skyW,skyH*0.85);
+  skyCtx.lineTo(skyW,skyH); skyCtx.closePath();
+  const hg2 = skyCtx.createLinearGradient(0,skyH*0.74,0,skyH);
+  hg2.addColorStop(0,'#0e1a09'); hg2.addColorStop(1,'#070d05');
+  skyCtx.fillStyle = hg2; skyCtx.fill();
+
+  skyCtx.beginPath();
+  skyCtx.moveTo(0,skyH);
+  skyCtx.bezierCurveTo(skyW*0.05,skyH*0.87,skyW*0.2,skyH*0.85,skyW*0.38,skyH*0.9);
+  skyCtx.bezierCurveTo(skyW*0.55,skyH*0.95,skyW*0.72,skyH*0.88,skyW,skyH*0.92);
+  skyCtx.lineTo(skyW,skyH); skyCtx.closePath();
+  const hg3 = skyCtx.createLinearGradient(0,skyH*0.85,0,skyH);
+  hg3.addColorStop(0,'#111f0c'); hg3.addColorStop(1,'#080e06');
+  skyCtx.fillStyle = hg3; skyCtx.fill();
+
+  requestAnimationFrame(drawSky);
+}
+requestAnimationFrame(drawSky);
+
+// WASM / EMSCRIPTEN INTEGRATION
+const canvasEl   = document.getElementById('canvas');
+const overlayEl  = document.getElementById('overlay');
+const statusEl   = document.getElementById('status');
+const detailsEl  = document.getElementById('details');
+const loaderBar  = document.getElementById('loader-bar');
+const statusDot  = document.getElementById('status-dot');
+const statusMsg  = document.getElementById('status-msg');
+
+function focusCanvas() {
+  if (canvasEl && typeof canvasEl.focus === 'function') {
+    canvasEl.focus({ preventScroll: true });
+  }
+}
+
+function setFatal(message, details) {
+  statusEl.textContent = message;
+  statusMsg.textContent = message;
+  if (details) { detailsEl.textContent = details; detailsEl.classList.add('visible'); }
+  overlayEl.classList.remove('hidden');
+  statusDot.classList.remove('loading', 'ready');
+}
+
+const backendUrl = 'https://api.angrymipts.ru';
+
+var Module = {
+  canvas: canvasEl,
+  ENV: { ANGRY_BACKEND_URL: backendUrl },
+  preRun: [],
+  postRun: [],
+  onAbort: function(reason) {
+    setFatal('Runtime aborted', String(reason || 'unknown reason'));
+  },
+  printErr: function(text) {
+    if (!text) return;
+    detailsEl.textContent = String(text);
+    detailsEl.classList.add('visible');
+  },
+  setStatus: function(text) {
+    if (!text) return;
+    statusEl.textContent = text;
+    statusMsg.textContent = text;
+    // Approximate progress from Emscripten status strings
+    const m = text.match(/(\d+)\/(\d+)/);
+    if (m) {
+      loaderBar.style.width = Math.round(parseInt(m[1]) / parseInt(m[2]) * 100) + '%';
     }
-
-    function requestFullscreenSafe() {
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-        return;
-      }
-
-      if (canvasEl && typeof canvasEl.requestFullscreen === 'function') {
-        canvasEl.requestFullscreen();
-        return;
-      }
-
-      if (Module && typeof Module.requestFullscreen === 'function') {
-        Module.requestFullscreen(false, false);
-      }
+  },
+  monitorRunDependencies: function(left) {
+    if (left > 0) {
+      const msg = 'Loading assets… ' + left + ' remaining';
+      statusEl.textContent = msg; statusMsg.textContent = msg;
+    } else {
+      const msg = 'Starting game…';
+      statusEl.textContent = msg; statusMsg.textContent = msg;
+      loaderBar.style.width = '95%';
     }
-
-    function setFatal(message, details) {
-      statusEl.textContent = message;
-      if (details) {
-        detailsEl.textContent = details;
-        detailsEl.classList.add('visible');
-      }
-      overlay.classList.remove('hidden');
-    }
-
-    const backendUrl = 'https://api.angrymipts.ru';
-
-    var Module = {
-      canvas: canvasEl,
-      ENV: {
-        ANGRY_BACKEND_URL: backendUrl
-      },
-      preRun: [],
-      postRun: [],
-      onAbort: function(reason) {
-        setFatal('Runtime aborted', String(reason || 'unknown reason'));
-      },
-      printErr: function(text) {
-        if (!text) return;
-        detailsEl.textContent = String(text);
-        detailsEl.classList.add('visible');
-      },
-      setStatus: function(text) {
-        if (text) statusEl.textContent = text;
-      },
-      monitorRunDependencies: function(left) {
-        if (left > 0) {
-          statusEl.textContent = 'Loading assets... ' + left;
-        } else {
-          statusEl.textContent = 'Starting game...';
-        }
-      },
-      onRuntimeInitialized: function() {
-        statusEl.textContent = 'Ready';
-        overlay.classList.add('hidden');
-        focusCanvas();
-      }
-    };
-
-    // Polyfill: Raylib calls deprecated Element.setCapture(),
-    // redirect to setPointerCapture for correct drag behavior.
-    if (!Element.prototype.setCapture) {
-      Element.prototype.setCapture = function() {
-        // no-op fallback — Raylib handles this via pointerdown
-      };
-    }
-
-    canvasEl.addEventListener('pointerdown', function(e) {
+  },
+  onRuntimeInitialized: function() {
+    loaderBar.style.width = '100%';
+    statusMsg.textContent = 'Game running';
+    setTimeout(() => {
+      overlayEl.classList.add('hidden');
+      statusDot.classList.remove('loading');
+      statusDot.classList.add('ready');
       focusCanvas();
-      canvasEl.setPointerCapture(e.pointerId);
-    });
-    fullscreenBtn.addEventListener('click', requestFullscreenSafe);
-    window.addEventListener('keydown', function(event) {
-      const isFullscreenHotkey = event.key === 'F11' || (event.key === 'Enter' && event.altKey);
-      if (!isFullscreenHotkey) return;
-      event.preventDefault();
-      requestFullscreenSafe();
-    });
-    document.addEventListener('fullscreenchange', function() {
-      fullscreenBtn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
-      focusCanvas();
-    });
+    }, 400);
+  }
+};
 
-    window.addEventListener('error', function(event) {
-      const args = event || {};
+// Polyfill: Raylib calls deprecated Element.setCapture()
+if (!Element.prototype.setCapture) {
+  Element.prototype.setCapture = function() {};
+}
 
-      // Ignore non-fatal resource errors (for example favicon).
-      // If one of core runtime artifacts fails, keep it fatal.
-      const target = args.target || args.srcElement;
-      if (target && target !== window) {
-        const url = String(target.src || target.href || '');
-        if (!/AngryMipts\.(js|wasm|data)(\?|$)/i.test(url)) {
-          return;
-        }
-        setFatal('Core resource load error', url || 'unknown resource');
-        return;
-      }
+canvasEl.addEventListener('pointerdown', function(e) {
+  focusCanvas();
+  canvasEl.setPointerCapture(e.pointerId);
+});
 
-      const info = [
-        args.message || 'unknown error',
-        args.filename ? ('file: ' + args.filename) : '',
-        args.lineno ? ('line: ' + args.lineno + ':' + (args.colno || 0)) : ''
-      ].filter(Boolean).join('\n');
-      setFatal('Runtime error', info || 'unknown runtime error');
-    });
+// FULLSCREEN
+const fsBtn = document.getElementById('btn-fullscreen');
+const fsIconExpand = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M1.5 4.5V1.5H4.5M8.5 1.5H11.5V4.5M11.5 8.5V11.5H8.5M4.5 11.5H1.5V8.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Fullscreen`;
+const fsIconCollapse = `<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M4.5 1.5H1.5V4.5M11.5 4.5V1.5H8.5M8.5 11.5H11.5V8.5M1.5 8.5V11.5H4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg> Exit Full`;
 
-    window.addEventListener('unhandledrejection', function(event) {
-      const reason = event && event.reason ? String(event.reason) : 'unknown promise rejection';
-      setFatal('Unhandled rejection', reason);
-    });
-  </script>
-  {{{ SCRIPT }}}
+function requestFullscreenSafe() {
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    return;
+  }
+  if (typeof Module !== 'undefined' && Module.requestFullscreen) {
+    Module.requestFullscreen(false, true);
+  } else {
+    const el = document.documentElement;
+    (el.requestFullscreen || el.webkitRequestFullscreen).call(el);
+  }
+}
+
+function onFullscreenChange() {
+  const isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  fsBtn.innerHTML = isFs ? fsIconCollapse : fsIconExpand;
+  focusCanvas();
+  if (!isFs) {
+    canvasEl.width = 1280;
+    canvasEl.height = 720;
+  }
+}
+
+fsBtn.addEventListener('click', requestFullscreenSafe);
+document.addEventListener('fullscreenchange', onFullscreenChange);
+document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+window.addEventListener('keydown', function(e) {
+  if (e.key === 'F11' || (e.key === 'Enter' && e.altKey)) {
+    e.preventDefault(); requestFullscreenSafe();
+  }
+});
+
+// ERROR HANDLING
+window.addEventListener('error', function(event) {
+  const target = event.target || event.srcElement;
+  if (target && target !== window) {
+    const url = String(target.src || target.href || '');
+    if (!/AngryMipts\.(js|wasm|data)(\?|$)/i.test(url)) return;
+    setFatal('Core resource load error', url || 'unknown resource');
+    return;
+  }
+  const info = [
+    event.message || 'unknown error',
+    event.filename ? ('file: ' + event.filename) : '',
+    event.lineno   ? ('line: ' + event.lineno + ':' + (event.colno || 0)) : ''
+  ].filter(Boolean).join('\n');
+  setFatal('Runtime error', info || 'unknown runtime error');
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+  setFatal('Unhandled rejection', event.reason ? String(event.reason) : 'unknown');
+});
+</script>
+{{{ SCRIPT }}}
 </body>
 </html>
