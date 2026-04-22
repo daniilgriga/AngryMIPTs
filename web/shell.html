@@ -233,14 +233,22 @@
         document.exitFullscreen();
         return;
       }
-
-      if (canvasEl && typeof canvasEl.requestFullscreen === 'function') {
+      // Use Emscripten's fullscreen API — it resizes the canvas correctly
+      // and keeps Raylib's coordinate mapping intact.
+      if (typeof Module !== 'undefined' && Module.requestFullscreen) {
+        Module.requestFullscreen(false, true);
+      } else if (canvasEl.requestFullscreen) {
         canvasEl.requestFullscreen();
-        return;
       }
+    }
 
-      if (Module && typeof Module.requestFullscreen === 'function') {
-        Module.requestFullscreen(false, false);
+    function onFullscreenChange() {
+      fullscreenBtn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
+      focusCanvas();
+      if (!document.fullscreenElement) {
+        // Restore logical canvas size on exit
+        canvasEl.width = 1280;
+        canvasEl.height = 720;
       }
     }
 
@@ -306,10 +314,7 @@
       event.preventDefault();
       requestFullscreenSafe();
     });
-    document.addEventListener('fullscreenchange', function() {
-      fullscreenBtn.textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
-      focusCanvas();
-    });
+    document.addEventListener('fullscreenchange', onFullscreenChange);
 
     window.addEventListener('error', function(event) {
       const args = event || {};
