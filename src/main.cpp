@@ -176,7 +176,7 @@ int main()
     app.scenes.switch_to(
         app.accounts.is_logged_in() ? angry::SceneId::Menu : angry::SceneId::Login );
 
-    emscripten_set_main_loop( web_frame, 0, 1 );
+    emscripten_set_main_loop( web_frame, 0, 0 );
 
     return 0;
 }
