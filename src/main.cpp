@@ -151,7 +151,9 @@ int main()
     const std::string scores_path;   // disabled on web (no persistent local file storage yet)
 
     app.window.create( 1280, 720, "AngryMipts" );
-    app.window.setFramerateLimit( 60 );
+    // Frame timing is controlled by emscripten_set_main_loop (requestAnimationFrame).
+    // Calling SetTargetFPS here causes Raylib to emscripten_sleep() inside EndDrawing(),
+    // which suspends the ASYNCIFY coroutine and skips every other rAF slot → 30 FPS.
 
     if ( !app.font.openFromFile( font_path ) )
     {
