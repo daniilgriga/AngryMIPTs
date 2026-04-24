@@ -769,6 +769,10 @@ void GameScene::load_level ( int level_id, const std::string& scores_path )
     scores_path_ = scores_path;
     pending_scene_ = SceneId::None;
     end_delay_ = 0.f;
+    ammo_bonus_queue_.clear();
+    ammo_bonus_showing_ = false;
+    ammo_bonus_delay_ = 0.f;
+    displayed_score_ = 0;
     dropper_payload_ghosts_.clear();
     pending_events_.clear();
     smoothed_dt_sec_ = 1.0f / 60.0f;
@@ -817,6 +821,7 @@ void GameScene::retry()
 void GameScene::finish_level()
 {
     const bool won = ( snapshot_.status == LevelStatus::Win );
+    displayed_score_ = snapshot_.score;  // sync before leaving
     const int score = snapshot_.score;
     const int stars = std::clamp ( snapshot_.stars, 0, 3 );
 
@@ -1404,6 +1409,10 @@ void GameScene::process_events()
                     shake_strength_ = std::max ( shake_strength_, cfg.shakeStrength );
                     impact_flash_ = std::max ( impact_flash_, cfg.flashBoost );
                 }
+                else if constexpr ( std::is_same_v<T, AmmoBonusEvent> )
+                {
+                    ammo_bonus_queue_.push_back ( { e.projectileType, e.bonus } );
+                }
             },
             ev );
     }
@@ -1567,12 +1576,33 @@ void GameScene::update()
 
     if ( snapshot_.status != LevelStatus::Running )
     {
+        process_events();
         particles_.update ( dt );
         update_dropper_payload_ghosts();
         update_inflater_rings();
         update_bubble_floats();
         end_delay_ += dt;
-        if ( end_delay_ >= 1.5f && pending_scene_ == SceneId::None )
+
+        // Tick ammo bonus popups — show one every 0.6s with fade animation
+        ammo_bonus_delay_ -= dt;
+        if ( ammo_bonus_showing_ )
+        {
+            ammo_bonus_active_.age += dt;
+            if ( ammo_bonus_active_.age >= ammo_bonus_active_.lifetime )
+                ammo_bonus_showing_ = false;
+        }
+        if ( !ammo_bonus_showing_ && ammo_bonus_delay_ <= 0.f && !ammo_bonus_queue_.empty() )
+        {
+            ammo_bonus_active_ = ammo_bonus_queue_.front();
+            ammo_bonus_queue_.pop_front();
+            ammo_bonus_active_.age = 0.f;
+            ammo_bonus_showing_ = true;
+            ammo_bonus_delay_ = 0.6f;
+            displayed_score_ += ammo_bonus_active_.bonus;
+        }
+
+        const bool bonuses_done = ammo_bonus_queue_.empty() && !ammo_bonus_showing_;
+        if ( end_delay_ >= 1.5f && bonuses_done && pending_scene_ == SceneId::None )
             finish_level();
         return;
     }
@@ -1594,8 +1624,25 @@ void GameScene::update()
         }
     }
     if ( snapshot_ready_ )
+    {
+        const bool transitioning_to_win = ( snapshot_.status == LevelStatus::Running &&
+                                             new_snap.status == LevelStatus::Win );
         snapshot_ = new_snap;
-    process_events();
+        process_events();  // drain AmmoBonusEvents into queue before freeze
+
+        if ( transitioning_to_win )
+        {
+            // Score without bonuses = new score minus sum of queued bonuses
+            int bonus_sum = 0;
+            for ( const auto& p : ammo_bonus_queue_ )
+                bonus_sum += p.bonus;
+            displayed_score_ = snapshot_.score - bonus_sum;
+        }
+        else if ( snapshot_.status == LevelStatus::Running )
+        {
+            displayed_score_ = snapshot_.score;
+        }
+    }
 
     const bool low_vfx = vfx_load_factor_ < 0.72f;
     const int trail_emit_count = low_vfx ? 1 : 2;
@@ -1674,7 +1721,7 @@ void GameScene::update()
 
     impact_flash_ = std::max ( 0.f, impact_flash_ - dt * kImpactFlashDecay );
 
-    hud_text_.setString ( "Score: " + std::to_string ( snapshot_.score )
+    hud_text_.setString ( "Score: " + std::to_string ( displayed_score_ )
                           + "   [Space] Ability   [Backspace] Menu" );
 }
 
@@ -1944,7 +1991,43 @@ void GameScene::render ( platform::Window& window )
     }
 
     // HUD in screen coordinates
-    renderer_.draw_hud ( window, snapshot_, hud_text_ );
+    {
+        WorldSnapshot hud_snap = snapshot_;
+        hud_snap.score = displayed_score_;
+        renderer_.draw_hud ( window, hud_snap, hud_text_ );
+    }
+
+    // Ammo bonus popups
+    if ( ammo_bonus_showing_ )
+    {
+        const float t = ammo_bonus_active_.age / ammo_bonus_active_.lifetime;
+        const float alpha_f = t < 0.15f ? t / 0.15f : ( t > 0.75f ? 1.f - ( t - 0.75f ) / 0.25f : 1.f );
+        const float rise = -40.f * t;
+        const auto  alpha = static_cast<uint8_t> ( alpha_f * 255.f );
+
+        const std::string label = "+" + std::to_string ( ammo_bonus_active_.bonus );
+        platform::Text popup_text ( font_, label, 32 );
+        popup_text.setFillColor ( platform::Color ( 255, 220, 60, alpha ) );
+        popup_text.setOutlineColor ( platform::Color ( 0, 0, 0, alpha ) );
+        popup_text.setOutlineThickness ( 2.f );
+
+        const auto bounds = popup_text.getLocalBounds();
+        const float icon_w = 56.f;  // 256px texture * 0.22 scale
+        const float gap    = 4.f;
+        const float total_w = icon_w + gap + bounds.size.x;
+        const float cx = static_cast<float> ( window_size.x ) * 0.5f;
+        const float cy = static_cast<float> ( window_size.y ) * 0.38f + rise;
+        const float text_x = cx - total_w * 0.5f + icon_w + gap;
+        popup_text.setPosition ( sf::Vector2f { text_x, cy } );
+        window.draw ( popup_text );
+
+        // Projectile icon next to text
+        sf::Sprite icon ( renderer_.projectile_texture ( ammo_bonus_active_.type ) );
+        icon.setScale ( { 0.22f, 0.22f } );
+        icon.setColor ( sf::Color ( 255, 255, 255, alpha ) );
+        icon.setPosition ( sf::Vector2f { cx - total_w * 0.5f, cy - 2.f } );
+        window.draw ( icon );
+    }
 
     if ( show_perf_overlay_ )
     {
@@ -2112,7 +2195,44 @@ void GameScene::render ( platform::Window& window )
     particles_.render ( window );
 
     window.setView ( window.getDefaultView() );
-    renderer_.draw_hud ( window, snapshot_, hud_text_ );
+    {
+        WorldSnapshot hud_snap = snapshot_;
+        hud_snap.score = displayed_score_;
+        renderer_.draw_hud ( window, hud_snap, hud_text_ );
+    }
+
+    // Ammo bonus popups (web/Raylib path)
+    if ( ammo_bonus_showing_ )
+    {
+        const float t = ammo_bonus_active_.age / ammo_bonus_active_.lifetime;
+        const float alpha_f = t < 0.15f ? t / 0.15f : ( t > 0.75f ? 1.f - ( t - 0.75f ) / 0.25f : 1.f );
+        const float rise = -40.f * t;
+        const auto  alpha = static_cast<uint8_t> ( alpha_f * 255.f );
+
+        const std::string label = "+" + std::to_string ( ammo_bonus_active_.bonus );
+        const int font_size = 32;
+        const int text_w  = MeasureText ( label.c_str(), font_size );
+        const int icon_size = 28;
+        const int gap       = 6;
+        const int total_w   = icon_size + gap + text_w;
+        const int cx = static_cast<int> ( window_size.x ) / 2;
+        const int cy = static_cast<int> ( static_cast<float> ( window_size.y ) * 0.38f + rise );
+        const int text_x  = cx - total_w / 2 + icon_size + gap;
+        const int icon_x  = cx - total_w / 2;
+
+        // Shadow
+        DrawText ( label.c_str(), text_x + 2, cy + 2, font_size,
+                   Color { 0, 0, 0, alpha } );
+        DrawText ( label.c_str(), text_x, cy, font_size,
+                   Color { 255, 220, 60, alpha } );
+
+        // Projectile icon
+        const platform::Texture& tex = renderer_.projectile_texture ( ammo_bonus_active_.type );
+        DrawTextureEx ( tex.rl, { static_cast<float> ( icon_x ),
+                                  static_cast<float> ( cy - 2 ) },
+                        0.f, static_cast<float> ( icon_size ) / static_cast<float> ( tex.rl.width ),
+                        Color { 255, 255, 255, alpha } );
+    }
 
     if ( show_perf_overlay_ )
     {
