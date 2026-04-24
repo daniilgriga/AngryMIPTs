@@ -397,12 +397,15 @@ struct Window
     void display()
     {
 #ifdef __EMSCRIPTEN__
-        // Avoid Raylib's EndDrawing() on web: it calls PollInputEvents() which
-        // yields via emscripten_sleep(0). That setTimeout-based resume gets
-        // clamped by the browser to ~16ms and loses sync with rAF → 30 FPS.
-        // Flush the render batch and swap buffers manually — no yields.
+        // Avoid Raylib's EndDrawing() on web: it also invokes WaitTime() which
+        // nanosleeps (→ emscripten_sleep) whenever the target frame interval is
+        // set, losing sync with rAF and capping the game at 30 FPS.
+        // Call the pieces we need manually — PollInputEvents on web 5.5 just
+        // does the previous/current state swap required for IsMouseButtonPressed
+        // and has no internal sleep.
         rlDrawRenderBatchActive();
         SwapScreenBuffer();
+        PollInputEvents();
 #else
         EndDrawing();
 #endif
