@@ -384,7 +384,14 @@ struct Window
         default_view_.setViewport ( { 0.f, 0.f, 1.f, 1.f } );
         current_view_ = default_view_;
     }
-    bool isOpen() const { return open_ && !WindowShouldClose(); }
+    bool isOpen() const
+    {
+#ifdef __EMSCRIPTEN__
+        return open_;
+#else
+        return open_ && !WindowShouldClose();
+#endif
+    }
     void close()        { open_ = false; CloseWindow(); }
     void display()      { EndDrawing(); }
     void clear( Color c = {} ) { BeginDrawing(); ClearBackground( c.to_rl() ); }
@@ -932,10 +939,12 @@ inline std::vector<Event> poll_events( Window& w )
 {
     std::vector<Event> events;
 
+#ifndef __EMSCRIPTEN__
     if ( WindowShouldClose() )
     {
         events.push_back( ClosedEvent {} );
     }
+#endif
 
     const int width = GetScreenWidth();
     const int height = GetScreenHeight();
