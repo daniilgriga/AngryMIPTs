@@ -11,6 +11,7 @@
 #pragma once
 
 #include <raylib.h>
+#include <rlgl.h>
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
