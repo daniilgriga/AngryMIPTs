@@ -120,6 +120,7 @@ private:
     float active_projectile_settled_time_sec_ = 0.0f;
     ProjectileType active_projectile_type_ = ProjectileType::Standard;
     bool active_projectile_ability_used_ = false;
+    bool ammo_bonus_awarded_ = false;
 };
 
 }  // namespace angry

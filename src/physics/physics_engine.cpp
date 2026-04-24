@@ -59,6 +59,22 @@ constexpr float kBreakCarryRetainNormal = 0.35f;
 constexpr float kBreakCarryImpulseBoostMps = 0.8f;
 constexpr float kPostBreakDampingGraceSec = 0.12f;
 constexpr float kBreakCarryMaxSpeedMps = 28.0f;
+inline int ammo_bonus_for_projectile(ProjectileType type)
+{
+    switch (type)
+    {
+        case ProjectileType::Standard:  return 300;
+        case ProjectileType::Heavy:     return 600;
+        case ProjectileType::Splitter:  return 700;
+        case ProjectileType::Dasher:    return 500;
+        case ProjectileType::Bomber:    return 800;
+        case ProjectileType::Dropper:   return 500;
+        case ProjectileType::Boomerang: return 600;
+        case ProjectileType::Bubbler:   return 700;
+        case ProjectileType::Inflater:  return 600;
+    }
+    return 300;
+}
 constexpr float kFloorImpactDamageMultiplier = 0.75f;
 constexpr float kFloorContactMinNormalY = 0.75f;
 constexpr float kFloorContactBandTopPx = 30.0f;
@@ -238,7 +254,9 @@ inline ProjectileImpactOutcome resolve_projectile_impact_outcome(
                 ny = projectileVelocity.y / speed;
             }
 
-            const float vn = projectileVelocity.x * nx + projectileVelocity.y * ny;
+            // Use max(0, vn) so a Box2D-bounced post-step velocity never contributes
+            // a backward normal component — the projectile always carries through.
+            const float vn = std::max(0.0f, projectileVelocity.x * nx + projectileVelocity.y * ny);
             const b2Vec2 vNormal = b2Vec2{nx * vn, ny * vn};
             const b2Vec2 vTangential = b2Vec2{
                 projectileVelocity.x - vNormal.x,
@@ -251,9 +269,9 @@ inline ProjectileImpactOutcome resolve_projectile_impact_outcome(
             float correctedSpeed = std::sqrt(
                 correctedVelocity.x * correctedVelocity.x
                 + correctedVelocity.y * correctedVelocity.y);
-            const b2Vec2 velocityDir = b2Vec2{
-                projectileVelocity.x / speed,
-                projectileVelocity.y / speed};
+            // Use the block-facing normal as carry-through direction so the min-speed
+            // and boost always push forward, not in the (possibly reversed) post-step direction.
+            const b2Vec2 velocityDir = b2Vec2{nx, ny};
 
             if (correctedSpeed < kBreakCarryMinSpeedMps)
             {
@@ -441,6 +459,7 @@ void PhysicsEngine::load_level(const LevelData& level)
     active_projectile_settled_time_sec_ = 0.0f;
     active_projectile_type_ = ProjectileType::Standard;
     active_projectile_ability_used_ = false;
+    ammo_bonus_awarded_ = false;
     level_y_offset_px_ = 0.0f;
     support_bottom_px_ = 0.0f;
     events_.clear();
@@ -2183,6 +2202,34 @@ void PhysicsEngine::update_level_status()
 
     if (!hasAliveTargets)
     {
+        // Wait for the last in-flight projectile to settle before declaring Win.
+        if (has_alive_projectiles())
+        {
+            snapshot_.status = LevelStatus::Running;
+            return;
+        }
+
+        // Award one-time bonus for unused shots, per projectile type.
+        if (!ammo_bonus_awarded_)
+        {
+            ammo_bonus_awarded_ = true;
+            int total = 0;
+            for (int i = next_projectile_index_;
+                 i < static_cast<int>(current_level_.projectiles.size()); ++i)
+            {
+                const ProjectileType type = current_level_.projectiles[i].type;
+                const int bonus = ammo_bonus_for_projectile(type);
+                events_.push_back(AmmoBonusEvent{type, bonus});
+                total += bonus;
+            }
+            if (total > 0)
+            {
+                score_system_.add(total);
+                snapshot_.score = score_system_.score();
+                events_.push_back(ScoreChangedEvent{snapshot_.score});
+            }
+        }
+
         snapshot_.status = LevelStatus::Win;
         return;
     }
