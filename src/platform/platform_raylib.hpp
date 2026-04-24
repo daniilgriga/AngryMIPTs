@@ -388,9 +388,13 @@ struct Window
     void close()        { open_ = false; CloseWindow(); }
     void display()      { EndDrawing(); }
     void clear( Color c = {} ) { BeginDrawing(); ClearBackground( c.to_rl() ); }
-    void setFramerateLimit( unsigned fps )
+    void setFramerateLimit( unsigned /*fps*/ )
     {
-        SetTargetFPS( fps > 0 ? static_cast<int>( fps ) : 60 );
+        // On Emscripten, frame pacing is driven by requestAnimationFrame via
+        // emscripten_set_main_loop. SetTargetFPS would cause Raylib's EndDrawing()
+        // to call emscripten_sleep(), suspending the ASYNCIFY coroutine and
+        // skipping every other rAF slot → 30 FPS. Keep target at 0 (unlimited).
+        SetTargetFPS( 0 );
     }
     void setVerticalSyncEnabled( bool /*v*/ ) {}
     void setView( const View& view ) { current_view_ = view; }
