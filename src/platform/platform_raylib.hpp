@@ -393,7 +393,19 @@ struct Window
 #endif
     }
     void close()        { open_ = false; CloseWindow(); }
-    void display()      { EndDrawing(); }
+    void display()
+    {
+#ifdef __EMSCRIPTEN__
+        // Avoid Raylib's EndDrawing() on web: it calls PollInputEvents() which
+        // yields via emscripten_sleep(0). That setTimeout-based resume gets
+        // clamped by the browser to ~16ms and loses sync with rAF → 30 FPS.
+        // Flush the render batch and swap buffers manually — no yields.
+        rlDrawRenderBatchActive();
+        SwapScreenBuffer();
+#else
+        EndDrawing();
+#endif
+    }
     void clear( Color c = {} ) { BeginDrawing(); ClearBackground( c.to_rl() ); }
     void setFramerateLimit( unsigned /*fps*/ )
     {
