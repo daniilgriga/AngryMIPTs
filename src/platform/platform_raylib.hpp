@@ -397,12 +397,11 @@ struct Window
     void display()
     {
 #ifdef __EMSCRIPTEN__
-        // Avoid Raylib's EndDrawing() on web: it also invokes WaitTime() which
-        // nanosleeps (→ emscripten_sleep) whenever the target frame interval is
-        // set, losing sync with rAF and capping the game at 30 FPS.
-        // Call the pieces we need manually — PollInputEvents on web 5.5 just
-        // does the previous/current state swap required for IsMouseButtonPressed
-        // and has no internal sleep.
+        // Avoid Raylib's EndDrawing() on web: its WaitTime() path can call
+        // nanosleep → emscripten_sleep, which loses rAF sync → 30 FPS.
+        // PollInputEvents is called at the end (same order as EndDrawing) so
+        // previous/current button state swap happens after the frame read
+        // IsMouseButtonPressed/Released — otherwise those transitions are lost.
         rlDrawRenderBatchActive();
         SwapScreenBuffer();
         PollInputEvents();
