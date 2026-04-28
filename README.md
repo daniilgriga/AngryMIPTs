@@ -349,6 +349,7 @@ Unused shots grant bonus points at level completion. `ImpactResolvedEvent` provi
 
 ### Level Fields
 
+
 | Field | Type | Description |
 |---|---|---|
 | `id` | `string` | Unique level identifier (e.g. `"level_01"`) |
@@ -366,6 +367,8 @@ Unused shots grant bonus points at level completion. `ImpactResolvedEvent` provi
 
 Levels are stored in `levels/level_01.json` through `levels/level_0113.json` (18 levels total). The largest level is `level_0113.json` (12.9 KB). Level 05 is a developer showcase containing all 9 projectile types.
 
+For the full current JSON contract, scoring rules, material HP guidance, and block/target
+examples, see [docs/levels_guide.md](docs/levels_guide.md).
 ### Level Authoring Tool
 
 `tools/tiled_to_level.py` converts a **Tiled** map export (`.tmj` format) to the gameplay JSON format above. This allows level designers to place blocks and targets visually in Tiled and export directly to the game's format.

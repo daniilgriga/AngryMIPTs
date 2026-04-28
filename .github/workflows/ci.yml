@@ -3,21 +3,58 @@ name: CI
 on:
   push:
   workflow_dispatch:
-  pull_request_target:
-    types: [opened, synchronize]
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
 
 jobs:
-  build-selfhosted:
-    name: Build (self-hosted Linux)
-    runs-on: [self-hosted, linux, x64, vps-ci]
-    if: github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository
+  build-linux:
+    name: Build (GitHub-hosted Linux)
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ccache \
+            cmake \
+            g++ \
+            libcurl4-openssl-dev \
+            libflac-dev \
+            libfreetype6-dev \
+            libgl1-mesa-dev \
+            libgtest-dev \
+            libogg-dev \
+            libopenal-dev \
+            libssl-dev \
+            libudev-dev \
+            libvorbis-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            nlohmann-json3-dev \
+            pkg-config
+
+      - name: Build SFML 3
+        run: |
+          git clone --depth 1 --branch 3.0.0 https://github.com/SFML/SFML.git "$HOME/sfml-src"
+          cmake -S "$HOME/sfml-src" -B "$HOME/sfml-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$HOME/sfml-3" \
+            -DBUILD_SHARED_LIBS=ON \
+            -DSFML_BUILD_EXAMPLES=OFF \
+            -DSFML_BUILD_DOC=OFF \
+            -DSFML_BUILD_TEST_SUITE=OFF
+          cmake --build "$HOME/sfml-build" --parallel 2
+          cmake --install "$HOME/sfml-build"
 
       - name: Show environment
         run: |
@@ -36,8 +73,8 @@ jobs:
 
       - name: Export build/runtime paths
         run: |
-          echo "CMAKE_PREFIX_PATH=/opt/sfml-3" >> "$GITHUB_ENV"
-          echo "LD_LIBRARY_PATH=/opt/sfml-3/lib:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          echo "CMAKE_PREFIX_PATH=$HOME/sfml-3" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$HOME/sfml-3/lib:${LD_LIBRARY_PATH}" >> "$GITHUB_ENV"
           echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
 
       - name: Prepare ccache
@@ -50,24 +87,120 @@ jobs:
           ccache --show-stats || true
 
       - name: Clean previous build directory
-        run: rm -rf build-selfhosted
+        run: rm -rf build-linux
 
       - name: Configure
         run: |
-          cmake -S . -B build-selfhosted \
+          cmake -S . -B build-linux \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache \
-            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCPR_USE_SYSTEM_CURL=ON \
+            -DFETCHCONTENT_BASE_DIR=$HOME/.cmake-deps
 
       - name: Build
-        run: cmake --build build-selfhosted --parallel 2
+        run: cmake --build build-linux --parallel 2
 
       - name: Show ccache stats after build
         run: ccache --show-stats
 
       - name: Test
-        run: ctest --test-dir build-selfhosted --output-on-failure
+        run: ctest --test-dir build-linux --output-on-failure
+
+      - name: Show final ccache stats
+        if: always()
+        run: ccache --show-stats
+
+  build-macos:
+    name: Build (GitHub-hosted macOS)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          brew update
+          brew install \
+            ccache \
+            cmake \
+            flac \
+            freetype \
+            googletest \
+            libogg \
+            libvorbis \
+            nlohmann-json \
+            openal-soft \
+            pkg-config
+
+      - name: Build SFML 3
+        run: |
+          git clone --depth 1 --branch 3.0.0 https://github.com/SFML/SFML.git "$HOME/sfml-src"
+          cmake -S "$HOME/sfml-src" -B "$HOME/sfml-build" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX="$HOME/sfml-3" \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix)" \
+            -DBUILD_SHARED_LIBS=ON \
+            -DSFML_USE_SYSTEM_DEPS=ON \
+            -DSFML_BUILD_EXAMPLES=OFF \
+            -DSFML_BUILD_DOC=OFF \
+            -DSFML_BUILD_TEST_SUITE=OFF
+          cmake --build "$HOME/sfml-build" --parallel 2
+          cmake --install "$HOME/sfml-build"
+
+      - name: Show environment
+        run: |
+          whoami
+          hostname
+          pwd
+          ls -la
+
+      - name: Show tool versions
+        run: |
+          cmake --version
+          c++ --version
+          git --version
+          ccache --version
+          pkg-config --modversion openssl || true
+
+      - name: Export build/runtime paths
+        run: |
+          echo "CMAKE_PREFIX_PATH=$HOME/sfml-3;$(brew --prefix)" >> "$GITHUB_ENV"
+          echo "DYLD_LIBRARY_PATH=$HOME/sfml-3/lib:${DYLD_LIBRARY_PATH}" >> "$GITHUB_ENV"
+          echo "CCACHE_DIR=$HOME/.ccache" >> "$GITHUB_ENV"
+
+      - name: Prepare ccache
+        run: |
+          mkdir -p "$HOME/.ccache"
+          ccache --set-config=max_size=2G
+          ccache --set-config=compression=true
+          ccache --set-config=compiler_check=content
+          ccache --show-config
+          ccache --show-stats || true
+
+      - name: Clean previous build directory
+        run: rm -rf build-macos
+
+      - name: Configure
+        run: |
+          cmake -S . -B build-macos \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${CMAKE_PREFIX_PATH}" \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCPR_USE_SYSTEM_CURL=ON \
+            -DFETCHCONTENT_BASE_DIR=$HOME/.cmake-deps
+
+      - name: Build
+        run: cmake --build build-macos --parallel 2
+
+      - name: Show ccache stats after build
+        run: ccache --show-stats
+
+      - name: Test
+        run: ctest --test-dir build-macos --output-on-failure
 
       - name: Show final ccache stats
         if: always()
