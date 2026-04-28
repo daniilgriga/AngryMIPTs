@@ -11,6 +11,7 @@
 #pragma once
 
 #include <raylib.h>
+#include <rlgl.h>
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
@@ -384,13 +385,38 @@ struct Window
         default_view_.setViewport ( { 0.f, 0.f, 1.f, 1.f } );
         current_view_ = default_view_;
     }
-    bool isOpen() const { return open_ && !WindowShouldClose(); }
-    void close()        { open_ = false; CloseWindow(); }
-    void display()      { EndDrawing(); }
-    void clear( Color c = {} ) { BeginDrawing(); ClearBackground( c.to_rl() ); }
-    void setFramerateLimit( unsigned fps )
+    bool isOpen() const
     {
-        SetTargetFPS( fps > 0 ? static_cast<int>( fps ) : 60 );
+#ifdef __EMSCRIPTEN__
+        return open_;
+#else
+        return open_ && !WindowShouldClose();
+#endif
+    }
+    void close()        { open_ = false; CloseWindow(); }
+    void display()
+    {
+#ifdef __EMSCRIPTEN__
+        // Avoid Raylib's EndDrawing() on web: its WaitTime() path can call
+        // nanosleep → emscripten_sleep, which loses rAF sync → 30 FPS.
+        // PollInputEvents is called at the end (same order as EndDrawing) so
+        // previous/current button state swap happens after the frame read
+        // IsMouseButtonPressed/Released — otherwise those transitions are lost.
+        rlDrawRenderBatchActive();
+        SwapScreenBuffer();
+        PollInputEvents();
+#else
+        EndDrawing();
+#endif
+    }
+    void clear( Color c = {} ) { BeginDrawing(); ClearBackground( c.to_rl() ); }
+    void setFramerateLimit( unsigned /*fps*/ )
+    {
+        // On Emscripten, frame pacing is driven by requestAnimationFrame via
+        // emscripten_set_main_loop. SetTargetFPS would cause Raylib's EndDrawing()
+        // to call emscripten_sleep(), suspending the ASYNCIFY coroutine and
+        // skipping every other rAF slot → 30 FPS. Keep target at 0 (unlimited).
+        SetTargetFPS( 0 );
     }
     void setVerticalSyncEnabled( bool /*v*/ ) {}
     void setView( const View& view ) { current_view_ = view; }
@@ -928,10 +954,12 @@ inline std::vector<Event> poll_events( Window& w )
 {
     std::vector<Event> events;
 
+#ifndef __EMSCRIPTEN__
     if ( WindowShouldClose() )
     {
         events.push_back( ClosedEvent {} );
     }
+#endif
 
     const int width = GetScreenWidth();
     const int height = GetScreenHeight();
