@@ -511,7 +511,8 @@ if (!Element.prototype.setCapture) {
 
 canvasEl.addEventListener('pointerdown', function(e) {
   focusCanvas();
-  canvasEl.setPointerCapture(e.pointerId);
+  // Don't setPointerCapture here: it can break the mousemove event stream
+  // that Raylib-GLFW listens to during drag operations (slingshot aim).
 });
 
 // FULLSCREEN

@@ -80,8 +80,14 @@ struct ImpactResolvedEvent
     Vec2 contactPointPx;
 };
 
+struct AmmoBonusEvent
+{
+    ProjectileType projectileType;
+    int            bonus;
+};
+
 using Event = std::variant<CollisionEvent, DestroyedEvent, TargetHitEvent, ScoreChangedEvent,
                            LevelCompletedEvent, ProjectileReadyEvent, AbilityActivatedEvent,
-                           ImpactResolvedEvent>;
+                           ImpactResolvedEvent, AmmoBonusEvent>;
 
 }  // namespace angry

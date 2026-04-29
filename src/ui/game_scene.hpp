@@ -133,6 +133,20 @@ private:
     std::vector<BubbleFloat>          bubble_floats_;
     std::vector<BubbleCaptureZone>    bubble_capture_zones_;
     std::deque<Event> pending_events_;
+
+    struct AmmoBonusPopup
+    {
+        ProjectileType type;
+        int            bonus;
+        float          age      = 0.f;
+        float          lifetime = 1.4f;
+    };
+    std::deque<AmmoBonusPopup> ammo_bonus_queue_;
+    AmmoBonusPopup             ammo_bonus_active_;
+    bool                       ammo_bonus_showing_ = false;
+    float                      ammo_bonus_delay_   = 0.f;
+    int                        displayed_score_    = 0;
+
     bool show_perf_overlay_ = true;
     float smoothed_dt_sec_ = 1.0f / 60.0f;
     float smoothed_fps_ = 60.0f;
